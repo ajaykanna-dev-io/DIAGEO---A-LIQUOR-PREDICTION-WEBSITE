@@ -18,6 +18,7 @@ export default {
       },
       fontFamily: {
         display: ['"Cormorant Garamond"', '"Playfair Display"', 'serif'],
+        serif: ['"Cormorant Garamond"', '"Playfair Display"', 'serif'],
         sans: ['Manrope', 'Inter', 'sans-serif'],
       },
       letterSpacing: {

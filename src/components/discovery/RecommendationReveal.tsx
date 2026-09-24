@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, WheelEvent, TouchEvent } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import type { Spirit } from '../../types'
+import type { Spirit } from '@/types'
+import AmbientBarAudio from '@/components/AmbientBarAudio'
+import { IoClose } from 'react-icons/io5'
 
 interface RecommendationRevealProps {
   primaryMatch: Spirit
@@ -11,580 +13,814 @@ interface RecommendationRevealProps {
 }
 
 /**
- * RecommendationReveal (Stage 05 Final Reveal)
- * Haute Distillerie 3-Stage Cinematic Presentation:
- * - NO tabs on top (pure, quiet luxury)
- * - Clean, non-overlapping stage transitions (mode="wait"):
- *   - Stage 0: The Synthesis Prologue (Initial statement & concordance)
- *   - Stage 1: The Sanctuary Hero Bottle (Dedicated centerpiece: slanted, slowly rotating, glowing)
- *   - Stage 2: The Tasting Dossier (Crystal-clear, high-contrast sommelier story, palate notes & actions)
- * - Seamless scroll wheel, touch swipe, and depth gauge navigation
- * - Fixed 100svh viewport with internal dossier scrolling
+ * RecommendationReveal
+ * Replicates the ultra-premium editorial design from the reference image:
+ * - Twilight penthouse tasting lounge background with circular illuminated marble altar
+ * - Center: Dynamic bottle cutout from spirits.ts positioned on the glowing altar
+ * - Left: "YOUR MATCH", Brand & Name, Specs, Tasting Description, Pill Tags, and Match Score Badge
+ * - Right: Frosted glass "FLAVOUR PROFILE" card with SPICE, OAK, FRUIT, SMOKE, SWEETNESS bars,
+ *   "EXPLORE THIS EXPRESSION →" CTA, and "CELLAR SELECTION → | RECALIBRATE ↻"
+ * - Top Header: "A U R E L | TASTE DISCOVERY" and "YOUR JOURNEY ─── 08 / 08" with audio toggle
+ * - Bottom Bar: "01 ── • ── ‹ ARCHETYPE › ── • ── 08"
  */
+type RevealPhase = 'phase1_synthesis' | 'phase2_archetype' | 'final_recommendation'
+
 export default function RecommendationReveal({
   primaryMatch,
   secondaryMatches,
   matchScore,
   onRestart,
 }: RecommendationRevealProps) {
-  // Current active stage: 0 (Prologue), 1 (Bottle Sanctuary), 2 (Tasting Dossier)
-  const [stage, setStage] = useState<number>(0)
-  const isTransitioning = useRef<boolean>(false)
-  const touchStartY = useRef<number | null>(null)
-  const detailsScrollRef = useRef<HTMLDivElement>(null)
+  const [phase, setPhase] = useState<RevealPhase>('final_recommendation')
+  const [showCellarModal, setShowCellarModal] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'match' | 'flavour'>('match')
 
-  const goToStage = (targetStage: number) => {
-    if (isTransitioning.current) return
-    isTransitioning.current = true
-    setStage(targetStage)
-    setTimeout(() => {
-      isTransitioning.current = false
-    }, 450)
-  }
-
-  // Wheel Gesture Handler: Smoothly advances or returns between stages
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (isTransitioning.current) return
-
-    // If on Stage 2 (Dossier), check if the internal container is scrolling
-    if (stage === 2 && detailsScrollRef.current) {
-      const { scrollTop } = detailsScrollRef.current
-      if (e.deltaY < -25 && scrollTop <= 2) {
-        // At the very top scrolling up -> return to Bottle Sanctuary
-        goToStage(1)
-        return
-      }
-      // Otherwise allow native internal scroll of the dossier content
-      return
+  // Parse title into brand line & expression line to match "Johnnie Walker" / "Blonde"
+  const { brandLine, expressionLine } = useMemo(() => {
+    if (primaryMatch.brand && primaryMatch.name) {
+      return { brandLine: primaryMatch.brand, expressionLine: primaryMatch.name }
     }
-
-    if (e.deltaY > 25) {
-      // Scroll down -> advance
-      if (stage === 0) goToStage(1)
-      else if (stage === 1) goToStage(2)
-    } else if (e.deltaY < -25) {
-      // Scroll up -> return
-      if (stage === 1) goToStage(0)
-      else if (stage === 2) goToStage(1)
-    }
-  }
-
-  // Touch Gesture Handlers for Mobile / Tablet
-  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    touchStartY.current = e.touches[0].clientY
-  }
-
-  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    if (touchStartY.current === null || isTransitioning.current) return
-    const currentY = e.touches[0].clientY
-    const deltaY = touchStartY.current - currentY
-
-    if (stage === 2 && detailsScrollRef.current) {
-      const { scrollTop } = detailsScrollRef.current
-      if (deltaY < -35 && scrollTop <= 2) {
-        goToStage(1)
-        touchStartY.current = currentY
-        return
-      }
-      return
-    }
-
-    if (deltaY > 40) {
-      // Swipe up (advance)
-      if (stage < 2) {
-        goToStage(stage + 1)
-        touchStartY.current = currentY
-      }
-    } else if (deltaY < -40) {
-      // Swipe down (return)
-      if (stage > 0) {
-        goToStage(stage - 1)
-        touchStartY.current = currentY
+    const parts = primaryMatch.fullName.split(' ')
+    if (parts.length >= 3) {
+      return {
+        brandLine: parts.slice(0, 2).join(' '),
+        expressionLine: parts.slice(2).join(' '),
       }
     }
-  }
-
-  // Keyboard Navigation
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
-        goToStage(Math.min(2, stage + 1))
-      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
-        goToStage(Math.max(0, stage - 1))
-      }
+    if (parts.length === 2) {
+      return { brandLine: parts[0], expressionLine: parts[1] }
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [stage])
+    return { brandLine: primaryMatch.fullName, expressionLine: '' }
+  }, [primaryMatch])
+
+  // Clean, consistent specs line: "BLEND · SCOTLAND · 40%"
+  const specsLine = useMemo(() => {
+    const category = (primaryMatch.category || 'Single Malt').toUpperCase()
+    const origin = (primaryMatch.origin || 'Scotland').split(',')[0].trim().toUpperCase()
+    const abv = primaryMatch.abv || '40%'
+    return `${category}  ·  ${origin}  ·  ${abv}`
+  }, [primaryMatch])
+
+  // 5 Flavour dimensions matching the reference image: SPICE, OAK, FRUIT, SMOKE, SWEETNESS
+  const flavourBars = useMemo(() => {
+    const prof = primaryMatch.profile || {
+      complexity: 65,
+      intensity: 60,
+      smoothness: 85,
+      smokiness: 20,
+      sweetness: 85,
+    }
+
+    return [
+      { label: 'SPICE', val: Math.round(prof.complexity * 0.88 + 4) },
+      { label: 'OAK', val: Math.round(prof.intensity * 0.86 + 8) },
+      { label: 'FRUIT', val: Math.round(prof.smoothness * 0.94 + 2) },
+      { label: 'SMOKE', val: Math.round(prof.smokiness) },
+      { label: 'SWEETNESS', val: Math.round(prof.sweetness) },
+    ]
+  }, [primaryMatch])
+
+  const archetype = primaryMatch.archetype || 'THE EXPLORER'
 
   return (
-    <div
-      onWheel={handleWheel}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      className="relative w-full h-full min-h-0 flex flex-col justify-between select-none overflow-hidden"
-    >
-      {/* ── Quiet Luxury Vertical Depth Gauge (Far Right Edge, No Cheap Tabs) ── */}
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col justify-between bg-[#070605] text-[#FAF7F2] select-none z-50">
+      {/* ── CINEMATIC BACKDROP ── */}
       <div
-        className="pointer-events-none fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40 hidden sm:flex flex-col items-center gap-3"
+        className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000"
+        style={{
+          backgroundImage: "url('/images/results_penthouse_altar.jpg')",
+        }}
         aria-hidden="true"
       >
-        <span className="text-[8px] font-mono tracking-widest text-[#C6A15B]/50 uppercase rotate-90 origin-center mb-3">
-          DEPTH
-        </span>
-        <div className="flex flex-col items-center gap-3">
-          {[0, 1, 2].map((idx) => {
-            const isActive = stage === idx
-            return (
-              <div
-                key={idx}
-                className={`w-2 h-2 rotate-45 transition-all duration-500 ${
-                  isActive
-                    ? 'bg-[#C6A15B] shadow-[0_0_10px_#C6A15B] scale-125'
-                    : 'border border-[#C6A15B]/30 bg-[#080807]'
-                }`}
-              />
-            )
-          })}
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/50 opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.65)_90%)]" />
       </div>
 
-      {/* ── Primary Stage Container with Clean Non-Overlapping Transitions ── */}
-      <div className="relative flex-1 min-h-0 w-full h-full flex items-center justify-center overflow-hidden">
-        <AnimatePresence mode="wait">
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* STAGE 0: THE SYNTHESIS PROLOGUE */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {stage === 0 && (
-            <motion.div
-              key="stage-0-prologue"
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -28, scale: 0.97 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto px-4 z-10"
+      {/* ── EDITORIAL TOP HEADER ── */}
+      <header className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-12 pt-3 sm:pt-5 pb-1 sm:pb-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            to="/"
+            className="font-serif tracking-[0.25em] text-base sm:text-xl text-[#FAF7F2] hover:text-[#E5C378] transition-colors whitespace-nowrap drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]"
+          >
+            DIAGEO
+          </Link>
+          <span className="h-3.5 w-px bg-[#C6A15B]/40" />
+          <span className="font-mono text-[8px] sm:text-[10px] tracking-[0.28em] text-[#C6A15B] uppercase font-semibold whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
+            TASTE DISCOVERY
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-5">
+          {phase !== 'final_recommendation' ? (
+            <button
+              onClick={() => setPhase('final_recommendation')}
+              className="px-3 py-1 rounded-full border border-[#C6A15B]/60 bg-black/70 text-[#F5CE76] hover:text-white font-mono text-[9px] uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_12px_rgba(198,161,91,0.25)]"
             >
-              {/* Animated Gold Heraldic Seal */}
-              <motion.div
-                animate={{ scale: [1, 1.08, 1], opacity: [0.85, 1, 0.85] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-13 h-13 rounded-full border border-[#C6A15B]/50 bg-[#12100d] flex items-center justify-center mb-6 shadow-[0_0_28px_rgba(198,161,91,0.35)]"
-              >
-                <span className="text-[#E5C378] text-xl font-serif">✦</span>
-              </motion.div>
-
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] shadow-[0_0_8px_#C6A15B]" />
-                <span className="text-[10px] sm:text-xs font-mono tracking-[0.32em] uppercase text-[#C6A15B]">
-                  DIAGEO Bespoke Palate Synthesis
-                </span>
-              </div>
-
-              <h1 className="font-serif text-[clamp(2.3rem,5.2vw,3.9rem)] text-[#FAF7F2] font-normal tracking-tight leading-[1.08] mb-4">
-                We've found something that feels like you.
-              </h1>
-
-              <p className="text-stone/70 text-sm sm:text-base font-sans tracking-wide max-w-lg mx-auto mb-8 font-light leading-relaxed">
-                Calibrated across your sensory choices, ambient mood, and flavor spectrum.
-              </p>
-
-              {/* Concordance Gold Pill */}
-              <div className="flex items-center gap-2.5 px-4 py-1.5 bg-[#12100d] border border-[#C6A15B]/40 rounded-full font-mono text-[11px] tracking-[0.24em] text-[#E5C378] shadow-[0_4px_20px_rgba(198,161,91,0.25)] mb-8">
-                <span className="text-[#C6A15B]">✦</span>
-                <span>{matchScore}% SENSORY CONCORDANCE</span>
-              </div>
-
-              {/* Breathing Scroll Prompt */}
-              <button
-                type="button"
-                onClick={() => goToStage(1)}
-                className="group flex flex-col items-center gap-2 text-[#C6A15B]/80 hover:text-[#FAF7F2] cursor-pointer transition-colors pt-2"
-              >
-                <span className="text-[10px] font-mono tracking-[0.28em] uppercase">
-                  Scroll or Click to Unveil Bottle
-                </span>
-                <motion.span
-                  animate={{ y: [0, 6, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="text-base"
-                >
-                  ↓
-                </motion.span>
-              </button>
-            </motion.div>
+              Skip to Reveal →
+            </button>
+          ) : (
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 font-mono text-[8px] sm:text-[10px] tracking-[0.22em] text-stone/60 uppercase whitespace-nowrap">
+              <span>YOUR JOURNEY</span>
+              <span className="w-8 sm:w-12 h-px bg-white/20" />
+              <span className="text-[#FAF7F2] font-semibold">13 / 13</span>
+            </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* STAGE 1: THE BOTTLE SANCTUARY (Dedicated Slanted Rotating Showcase) */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {stage === 1 && (
-            <motion.div
-              key="stage-1-bottle"
-              initial={{ opacity: 0, y: 30, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -30, scale: 0.96 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full h-full flex flex-col items-center justify-center text-center px-4 z-20"
-            >
-              {/* Volumetric Glowing Amber Light Aura Behind Bottle */}
+          <AmbientBarAudio className="ml-2 sm:ml-4" />
+        </div>
+      </header>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ── PHASE 1: SENSORY ANALYSIS (DISTILLATION SYNTHESIS) ── */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence mode="wait">
+        {phase === 'phase1_synthesis' && (
+          <motion.div
+            key="phase1-container"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 max-w-3xl mx-auto my-auto min-h-0"
+          >
+            {/* Concentric Golden Orbital Rings */}
+            <div className="relative w-36 h-36 sm:w-48 sm:h-48 mb-6 flex items-center justify-center">
               <motion.div
-                animate={{
-                  opacity: [0.45, 0.7, 0.45],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] sm:w-[560px] h-[380px] sm:h-[560px] rounded-full blur-[95px] pointer-events-none"
-                style={{
-                  background:
-                    'radial-gradient(circle, rgba(198,161,91,0.65) 0%, rgba(198,161,91,0.25) 45%, transparent 72%)',
-                }}
-                aria-hidden="true"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                className="absolute inset-0 rounded-full border border-[#C6A15B]/30 border-dashed"
               />
-
-              {/* Title Floating Above Bottle */}
-              <div className="mb-2 z-10">
-                <span className="text-[10px] font-mono tracking-[0.32em] uppercase text-[#C6A15B]/90 block mb-1">
-                  {primaryMatch.category} · {primaryMatch.origin}
-                </span>
-                <h2 className="font-serif text-3xl sm:text-4xl text-[#FAF7F2] font-normal tracking-tight">
-                  {primaryMatch.fullName.toUpperCase()}
-                </h2>
-                <p className="font-serif text-sm sm:text-base italic text-[#E5C378] mt-0.5">
-                  {primaryMatch.descriptors.join(' · ')}
-                </p>
-              </div>
-
-              {/* ── Slanted & Slowly Rotating 3D Bottle Showcase ── */}
-              <div
-                className="relative w-full max-w-[290px] sm:max-w-[340px] h-[290px] sm:h-[360px] flex items-center justify-center my-1"
-                style={{ perspective: 1200 }}
+              <motion.div
+                animate={{ rotate: -360 }}
+                transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+                className="absolute inset-3 rounded-full border border-[#F5CE76]/40"
+              />
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                className="w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#1a140b] via-[#332512] to-[#120e08] border border-[#C6A15B] flex items-center justify-center shadow-[0_0_40px_rgba(198,161,91,0.45)]"
               >
-                {/* Concentric Architectural Pedestal Rings on Floor */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[260px] sm:w-[320px] h-[55px] pointer-events-none">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 38, repeat: Infinity, ease: 'linear' }}
-                    className="w-full h-full rounded-full border border-dashed border-[#C6A15B]/35"
-                    style={{ transform: 'rotateX(76deg)' }}
-                  />
-                  <div
-                    className="absolute inset-x-6 inset-y-2 rounded-full border border-[#C6A15B]/50 bg-[#C6A15B]/15 shadow-[0_0_25px_rgba(198,161,91,0.4)]"
-                    style={{ transform: 'rotateX(76deg)' }}
-                  />
+                <svg viewBox="0 0 24 24" className="w-8 h-8 text-[#F5CE76]" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
+                </svg>
+              </motion.div>
+            </div>
+
+            {/* Stage Title */}
+            <span className="font-mono text-[9px] sm:text-[11px] tracking-[0.38em] uppercase text-[#C6A15B] font-bold mb-2 block">
+              PHASE 01 — SENSORY SYNTHESIS
+            </span>
+            <h2 className="font-serif text-2xl sm:text-4xl text-white font-normal tracking-tight mb-3">
+              Synthesizing Palate Coordinates
+            </h2>
+            <p className="font-sans text-xs sm:text-sm text-stone/80 max-w-md mx-auto leading-relaxed mb-6 font-light">
+              Calibrating oak maturity, smoke viscosity, and cask resonance against master blender profiles...
+            </p>
+
+            {/* 4 Animated Metric Indicators */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-lg mb-6">
+              {[
+                { label: 'VISCOSITY', val: '94%' },
+                { label: 'CASK BALANCE', val: '88%' },
+                { label: 'ESTERS', val: '91%' },
+                { label: 'HARMONY', val: `${Math.round(matchScore)}%` },
+              ].map((m, i) => (
+                <motion.div
+                  key={m.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 * i + 0.2 }}
+                  className="p-2.5 rounded-xl bg-black/60 border border-[#C6A15B]/30 backdrop-blur-md"
+                >
+                  <span className="font-mono text-[8px] sm:text-[9px] tracking-widest text-stone/50 block">
+                    {m.label}
+                  </span>
+                  <span className="font-serif text-base sm:text-lg text-[#F5CE76] font-light">
+                    {m.val}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Auto progress bar */}
+            <div className="w-48 sm:w-64 h-1 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 2.8, ease: 'easeInOut' }}
+                className="h-full bg-gradient-to-r from-[#C6A15B] via-[#F5CE76] to-white shadow-[0_0_10px_#F5CE76]"
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ── PHASE 2: BESPOKE ARCHETYPE IDENTIFIED ── */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {phase === 'phase2_archetype' && (
+          <motion.div
+            key="phase2-container"
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 max-w-3xl mx-auto my-auto min-h-0"
+          >
+            <span className="font-mono text-[9px] sm:text-[11px] tracking-[0.38em] uppercase text-[#C6A15B] font-bold mb-3 block">
+              PHASE 02 — ARCHETYPE IDENTIFIED
+            </span>
+
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.7 }}
+              className="mb-3 flex items-center justify-center gap-2"
+            >
+              <span className="w-12 sm:w-16 h-px bg-gradient-to-r from-transparent to-[#C6A15B]" />
+              <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.3em] uppercase text-stone/60 font-semibold">
+                YOUR TASTE PROFILE ARCHETYPE
+              </span>
+              <span className="w-12 sm:w-16 h-px bg-gradient-to-l from-transparent to-[#C6A15B]" />
+            </motion.div>
+
+            {/* Unveiled Archetype Title */}
+            <motion.h1
+              initial={{ y: 15, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.7 }}
+              className="font-serif text-3xl sm:text-5xl lg:text-6xl text-[#FAF7F2] font-normal tracking-tight mb-4 drop-shadow-[0_2px_16px_rgba(0,0,0,0.95)]"
+            >
+              ‹ {archetype} ›
+            </motion.h1>
+
+            {/* Match Affinity Badge */}
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.45, duration: 0.6 }}
+              className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-[#C6A15B]/60 bg-black/70 backdrop-blur-xl shadow-[0_0_25px_rgba(198,161,91,0.35)] mb-6"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#C6A15B]/20 border border-[#C6A15B] flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#F5CE76]" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
+                </svg>
+              </div>
+              <span className="font-serif text-xl sm:text-2xl text-white font-light">
+                {Math.round(matchScore)}%
+              </span>
+              <span className="font-mono text-[9px] tracking-[0.25em] text-[#F5CE76] uppercase font-bold">
+                TASTE AFFINITY MATCH
+              </span>
+            </motion.div>
+
+            <p className="font-sans text-xs sm:text-sm text-stone/80 max-w-md mx-auto leading-relaxed font-light mb-6">
+              Distilling your bespoke expression from the world&apos;s greatest single malts and blended whiskies...
+            </p>
+
+            {/* Transition trigger button */}
+            <button
+              onClick={() => setPhase('final_recommendation')}
+              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#C6A15B] to-[#E5C378] text-black font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-bold shadow-[0_0_20px_rgba(198,161,91,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              Reveal Matched Spirit →
+            </button>
+          </motion.div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ── FINAL RECOMMENDATION PAGE (PENTHOUSE ALTAR WITH CARDS) ── */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {phase === 'final_recommendation' && (
+          <motion.div
+            key="final-recommendation-container"
+            initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex-1 flex flex-col justify-between w-full min-h-0"
+          >
+            {/* ── DESKTOP 3-COLUMN REVEAL GRID (lg:grid) ── */}
+            <div className="hidden lg:grid grid-cols-12 gap-5 lg:gap-8 items-center w-full max-w-7xl mx-auto px-6 sm:px-12 flex-1 min-h-0">
+              {/* LEFT COLUMN: Dossier Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 22, x: -18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
+                className="col-span-4 z-20 group relative rounded-2xl p-4 sm:p-5 lg:p-5.5 bg-[#0c0a08]/80 backdrop-blur-2xl border border-[#C6A15B]/30 hover:border-[#DFBA73]/55 shadow-[0_20px_50px_rgba(0,0,0,0.85)] hover:shadow-[0_25px_60px_rgba(198,161,91,0.18)] transition-all duration-500 flex flex-col justify-between space-y-3 self-center"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#C6A15B]/10 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
+                    YOUR MATCH
+                  </span>
+                  <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] text-stone/50 uppercase">
+                    {specsLine}
+                  </span>
                 </div>
 
-                {/* 3D Bottle Rotation & Slanted Posture */}
-                <motion.div
-                  animate={{
-                    rotateY: [-16, 16, -16],
-                    rotateZ: [-8, -4, -8],
-                    rotateX: [6, 9, 6],
-                    y: [-10, 8, -10],
-                  }}
-                  transition={{
-                    rotateY: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
-                    rotateZ: { duration: 7, repeat: Infinity, ease: 'easeInOut' },
-                    rotateX: { duration: 8, repeat: Infinity, ease: 'easeInOut' },
-                    y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
-                  }}
-                  style={{ transformStyle: 'preserve-3d' }}
-                  className="relative w-[210px] sm:w-[250px] h-[270px] sm:h-[330px] flex items-center justify-center"
-                >
-                  {/* Glowing Amber Glass Aura */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#C6A15B]/30 via-transparent to-transparent rounded-2xl filter blur-xl opacity-75" />
+                <h1 className="font-serif text-2xl sm:text-3xl lg:text-[32px] text-[#FAF7F2] font-normal leading-[1.12] tracking-tight">
+                  <span>{brandLine}</span>
+                  {expressionLine && (
+                    <>
+                      <br />
+                      <span className="text-[#E5C378]">{expressionLine}</span>
+                    </>
+                  )}
+                </h1>
 
-                  {/* Bottle Visual Box */}
-                  <div className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-hidden shadow-[0_25px_65px_rgba(0,0,0,0.95)] border border-[#C6A15B]/35 bg-[#080807]/70">
+                <p className="text-stone/80 text-xs sm:text-[13px] font-sans font-light leading-relaxed line-clamp-3">
+                  {primaryMatch.description}
+                </p>
+
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {primaryMatch.descriptors.slice(0, 3).map((desc) => (
+                    <span
+                      key={desc}
+                      className="px-3 py-1 rounded-full border border-white/15 bg-white/5 text-[10px] sm:text-[11px] font-mono text-stone/90 backdrop-blur-md shadow-xs"
+                    >
+                      {desc}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#C6A15B]/60 bg-black/60 flex items-center justify-center p-1.5 shadow-[0_0_12px_rgba(198,161,91,0.25)]">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#E5C378]" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
+                      </svg>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="font-serif text-xl sm:text-2xl text-[#FAF7F2] font-light leading-none">
+                        {Math.round(matchScore)}%
+                      </span>
+                      <span className="font-mono text-[8px] tracking-[0.28em] text-stone/50 uppercase mt-0.5">
+                        TASTE AFFINITY
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-medium">
+                      OPTIMAL MATCH
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] shadow-[0_0_6px_#C6A15B]" />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* CENTER COLUMN: Bottle on Altar Pedestal */}
+              <div className="col-span-4 relative flex flex-col items-center justify-center self-stretch z-10 min-h-0">
+                {/* Archetype Badge Directly on Top of the Bottle */}
+                <motion.div
+                  initial={{ opacity: 0, y: -16, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.85, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col items-center mb-1.5 sm:mb-2 shrink-0 select-none z-30"
+                >
+                  <span className="text-[8px] sm:text-[9px] font-mono tracking-[0.38em] text-[#C6A15B]/75 uppercase mb-1">
+                    TASTE ARCHETYPE
+                  </span>
+                  <div className="flex items-center gap-2.5 px-4 sm:px-5 py-1.5 rounded-full border border-[#C6A15B]/60 bg-gradient-to-r from-black/85 via-[#18140e]/95 to-black/85 backdrop-blur-md shadow-[0_4px_24px_rgba(198,161,91,0.35),0_0_12px_rgba(198,161,91,0.2)]">
+                    <span className="text-[#C6A15B] text-xs font-serif">‹</span>
+                    <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.34em] text-[#FAF7F2] uppercase font-semibold">
+                      {archetype}
+                    </span>
+                    <span className="text-[#C6A15B] text-xs font-serif">›</span>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative flex flex-col items-center justify-center flex-1 min-h-0"
+                >
+                  {/* Golden altar glow beneath bottle */}
+                  <div className="absolute bottom-0 w-52 sm:w-64 h-14 rounded-full bg-[#FFD54F]/30 blur-3xl pointer-events-none" />
+                  <div className="absolute bottom-2 w-36 sm:w-48 h-6 rounded-full bg-[#C6A15B]/40 blur-xl pointer-events-none" />
+
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative h-[270px] sm:h-[310px] md:h-[340px] lg:h-[365px] xl:h-[385px] flex items-center justify-center"
+                  >
                     <img
                       src={primaryMatch.image}
                       alt={primaryMatch.fullName}
-                      className="w-full h-full object-cover object-center filter brightness-[1.06] contrast-[1.08]"
+                      className="max-h-full max-w-full object-contain filter drop-shadow-[0_22px_40px_rgba(0,0,0,0.95)] drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] select-none"
                     />
+                  </motion.div>
 
-                    {/* Luminous Light Sweep Sheen */}
-                    <motion.div
-                      animate={{ x: ['-140%', '240%'] }}
-                      transition={{ duration: 4.5, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
-                      className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[#FAF7F2]/25 to-transparent skew-x-[-25deg]"
-                      aria-hidden="true"
-                    />
-
-                    {/* Luxury Gold Hairline Corner Brackets */}
-                    <div className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#C6A15B]/60" />
-                    <div className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#C6A15B]/60" />
-                    <div className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#C6A15B]/60" />
-                    <div className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#C6A15B]/60" />
-                  </div>
-
-                  {/* Mirrored Base Shadow */}
                   <div
-                    className="absolute -bottom-8 inset-x-8 h-10 bg-gradient-to-b from-[#C6A15B]/30 to-transparent blur-md rounded-full pointer-events-none"
-                    style={{ transform: 'rotateX(80deg)' }}
+                    className="relative w-36 sm:w-44 h-7 overflow-hidden opacity-20 blur-[1.5px] pointer-events-none -mt-2"
+                    style={{ transform: 'scaleY(-1)' }}
+                  >
+                    <img
+                      src={primaryMatch.image}
+                      alt=""
+                      className="max-h-full max-w-full object-contain filter brightness-40"
+                    />
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* RIGHT COLUMN: Flavour Profile Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 22, x: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
+                className="col-span-4 z-20 group relative rounded-2xl p-4 sm:p-5 lg:p-5.5 bg-[#0c0a08]/80 backdrop-blur-2xl border border-[#C6A15B]/30 hover:border-[#DFBA73]/55 shadow-[0_20px_50px_rgba(0,0,0,0.85)] hover:shadow-[0_25px_60px_rgba(198,161,91,0.18)] transition-all duration-500 flex flex-col justify-between space-y-2.5 self-center"
+              >
+                <div className="absolute top-0 left-0 w-32 h-32 bg-[#C6A15B]/10 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] sm:text-[10px] font-mono tracking-[0.32em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
+                    FLAVOUR PROFILE
+                  </span>
+                  <span className="font-mono text-[9px] tracking-widest text-stone/50 uppercase">
+                    5 DIMENSIONS
+                  </span>
+                </div>
+
+                <div className="space-y-2 sm:space-y-2.5">
+                  {flavourBars.map((fb, idx) => (
+                    <div key={fb.label} className="space-y-0.5 sm:space-y-1">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono tracking-wider uppercase">
+                        <span className="text-stone/75">{fb.label}</span>
+                        <span className="text-[#FAF7F2] font-medium">{fb.val}%</span>
+                      </div>
+                      <div className="relative h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${fb.val}%` }}
+                          transition={{ duration: 1.1, delay: 0.08 * idx, ease: 'easeOut' }}
+                          className="h-full bg-gradient-to-r from-[#9e7d3b] via-[#E5C378] to-[#FFF8DB] rounded-full relative shadow-[0_0_8px_rgba(229,195,120,0.6)]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Link
+                  to={`/spirit/${primaryMatch.id}`}
+                  className="w-full mt-1.5 py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 hover:border-[#F5CE76] text-[#FAF7F2] font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium flex items-center justify-center gap-2 transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.6)] hover:shadow-[0_0_22px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <span>EXPLORE THIS EXPRESSION</span>
+                  <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </Link>
+
+                {/* ── PROMINENT LUXURY ACTION BUTTONS: CELLAR SELECTION & RECALIBRATE ── */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#C6A15B]/25 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowCellarModal(true)}
+                    className="group relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] via-[#14120f] to-[#0c0a08] hover:from-[#2a2219] hover:via-[#1c1813] hover:to-[#120f0c] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.18em] font-semibold transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_0_20px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span>CELLAR SELECTION</span>
+                    <span className="text-[#F5CE76] transition-transform duration-300 group-hover:translate-x-1">→</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onRestart}
+                    className="group relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] via-[#14120f] to-[#0c0a08] hover:from-[#2a2219] hover:via-[#1c1813] hover:to-[#120f0c] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.18em] font-semibold transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_0_20px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
+                    <span>RECALIBRATE</span>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* ── MOBILE COMPATIBLE CARD INTERFACE (lg:hidden) ── */}
+            {/* Fits cleanly into mobile viewports without squishing or overflowing */}
+            <div className="flex lg:hidden flex-col justify-between items-center w-full px-4 py-1 flex-1 min-h-0 overflow-hidden">
+              {/* Mobile Top Sensory Header (fills empty space purposefully) */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="flex flex-col items-center text-center pt-1 pb-1.5 shrink-0 z-20"
+              >
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-5 h-px bg-gradient-to-r from-transparent to-[#C6A15B]/70" />
+                  <span className="font-mono text-[9px] tracking-[0.38em] text-[#C6A15B] uppercase font-medium">
+                    CURATED SENSORY DESTINY
+                  </span>
+                  <span className="w-5 h-px bg-gradient-to-l from-transparent to-[#C6A15B]/70" />
+                </div>
+                <h1 className="font-serif text-base sm:text-lg text-stone-100 font-normal tracking-wide">
+                  Your Signature Expression
+                </h1>
+              </motion.div>
+
+              {/* Mobile Center Bottle on Altar */}
+              <div className="relative flex-1 flex flex-col items-center justify-center w-full min-h-0 py-1">
+                {/* Mobile Archetype Badge Directly on Top of Bottle */}
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="flex flex-col items-center mb-1.5 shrink-0 select-none z-30"
+                >
+                  <span className="text-[8px] font-mono tracking-[0.32em] text-[#C6A15B]/80 uppercase mb-0.5">
+                    TASTE ARCHETYPE
+                  </span>
+                  <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C6A15B]/60 bg-gradient-to-r from-black/90 via-[#1e1710] to-black/90 backdrop-blur-md shadow-[0_4px_18px_rgba(198,161,91,0.35)]">
+                    <span className="text-[#C6A15B] text-xs font-serif">‹</span>
+                    <span className="font-mono text-[10px] tracking-[0.32em] text-[#FAF7F2] uppercase font-semibold">
+                      {archetype}
+                    </span>
+                    <span className="text-[#C6A15B] text-xs font-serif">›</span>
+                  </div>
+                </motion.div>
+
+                <div className="absolute bottom-2 w-52 h-10 rounded-full bg-[#FFD54F]/30 blur-xl pointer-events-none" />
+                <motion.div
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative h-[225px] sm:h-[260px] flex items-center justify-center"
+                >
+                  <img
+                    src={primaryMatch.image}
+                    alt={primaryMatch.fullName}
+                    className="max-h-full max-w-full object-contain filter drop-shadow-[0_24px_45px_rgba(0,0,0,0.98)] select-none"
                   />
                 </motion.div>
               </div>
 
-              {/* Concordance Seal Centered Below Bottle */}
-              <div className="mt-2 mb-2 flex items-center gap-2 px-3.5 py-1 bg-[#12100d] border border-[#C6A15B]/40 rounded-full font-mono text-[10px] tracking-[0.24em] text-[#E5C378] shadow-[0_4px_16px_rgba(198,161,91,0.2)] z-10">
-                <span className="text-[#C6A15B]">✦</span>
-                <span>{matchScore}% SENSORY CONCORDANCE</span>
+              {/* Mobile Tab Pill Switcher */}
+              <div className="flex items-center gap-2 p-1 rounded-full bg-black/80 border border-[#C6A15B]/40 mb-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('match')}
+                  className={`px-4 py-1 rounded-full font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer ${
+                    mobileTab === 'match'
+                      ? 'bg-[#C6A15B] text-black font-bold shadow-[0_0_10px_rgba(198,161,91,0.5)]'
+                      : 'text-stone/60 hover:text-white'
+                  }`}
+                >
+                  ✦ YOUR MATCH
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('flavour')}
+                  className={`px-4 py-1 rounded-full font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer ${
+                    mobileTab === 'flavour'
+                      ? 'bg-[#C6A15B] text-black font-bold shadow-[0_0_10px_rgba(198,161,91,0.5)]'
+                      : 'text-stone/60 hover:text-white'
+                  }`}
+                >
+                  ∿ FLAVOUR MATRIX
+                </button>
               </div>
 
-              {/* Continuous Scroll Prompt */}
-              <button
-                type="button"
-                onClick={() => goToStage(2)}
-                className="group flex flex-col items-center gap-1 text-[#C6A15B]/80 hover:text-[#FAF7F2] cursor-pointer transition-colors mt-1 z-10"
-              >
-                <span className="text-[10px] font-mono tracking-[0.26em] uppercase">
-                  Scroll or Click for Tasting Dossier
-                </span>
-                <motion.span
-                  animate={{ y: [0, 5, 0] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                  className="text-sm"
-                >
-                  ↓
-                </motion.span>
-              </button>
-            </motion.div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* STAGE 2: THE TASTING DOSSIER (Pure, Crisp, 100% High-Contrast) */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {stage === 2 && (
-            <motion.div
-              key="stage-2-dossier"
-              initial={{ opacity: 0, y: 30, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.98 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full h-full max-w-5xl mx-auto flex flex-col justify-between overflow-hidden px-3 sm:px-6 z-30 bg-[#080807]/95 rounded-sm border border-[#C6A15B]/25 py-2 sm:py-4 shadow-[0_0_60px_rgba(0,0,0,0.9)]"
-            >
-              {/* Internal Smooth Scrollable Container for Dossier Details */}
-              <div
-                ref={detailsScrollRef}
-                className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-3 py-2 space-y-6"
-                style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(198,161,91,0.4) transparent' }}
-              >
-                {/* Two-Column / Balanced Dossier Architecture */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-                  {/* Left Column: Companion Floating Bottle View */}
-                  <div className="lg:col-span-4 flex flex-col items-center justify-center">
-                    <div className="relative w-[180px] sm:w-[210px] h-[250px] sm:h-[290px] rounded-xl overflow-hidden border border-[#C6A15B]/40 bg-[#0e0d0c] shadow-[0_15px_40px_rgba(0,0,0,0.85)]">
-                      <img
-                        src={primaryMatch.image}
-                        alt={primaryMatch.fullName}
-                        className="w-full h-full object-cover object-center filter brightness-[1.04]"
-                      />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#080807]/90 via-transparent to-transparent" />
-                      <div className="absolute bottom-2.5 inset-x-2 text-center">
-                        <span className="text-[9px] font-mono tracking-widest text-[#E5C378] uppercase">
-                          ✦ {matchScore}% SENSORY MATCH
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => goToStage(1)}
-                      className="mt-3 text-[10px] font-mono tracking-widest uppercase text-[#C6A15B]/70 hover:text-[#C6A15B] transition-colors inline-flex items-center gap-1 cursor-pointer"
+              {/* Mobile Active Card Container */}
+              <div className="w-full max-w-md shrink-0">
+                <AnimatePresence mode="wait">
+                  {mobileTab === 'match' ? (
+                    <motion.div
+                      key="mob-match-card"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25 }}
+                      className="rounded-xl p-3.5 bg-[#0c0a08]/85 backdrop-blur-2xl border border-[#C6A15B]/35 shadow-xl space-y-2"
                     >
-                      <span>↑ View Bottle Sanctuary</span>
-                    </button>
-                  </div>
-
-                  {/* Right Column: Editorial Dossier Content */}
-                  <div className="lg:col-span-8 flex flex-col text-left">
-                    {/* Category & Origin Bar */}
-                    <div className="flex flex-wrap items-center gap-3 mb-2 font-mono text-[10px] sm:text-xs tracking-[0.28em] text-[#C6A15B] uppercase">
-                      <span>{primaryMatch.category}</span>
-                      <span className="text-stone/40">·</span>
-                      <span>{primaryMatch.origin}</span>
-                      <span className="text-stone/40">·</span>
-                      <span>{primaryMatch.abv}</span>
-                    </div>
-
-                    {/* Monumental Product Title */}
-                    <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#FAF7F2] font-normal leading-[1.08] tracking-tight mb-2">
-                      {primaryMatch.fullName.toUpperCase()}
-                    </h2>
-
-                    {/* Descriptors */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4 font-serif text-base sm:text-lg italic text-[#E5C378]">
-                      {primaryMatch.descriptors.map((desc, i) => (
-                        <span key={desc} className="flex items-center gap-2">
-                          <span>{desc}</span>
-                          {i < primaryMatch.descriptors.length - 1 && (
-                            <span className="text-[#C6A15B]/40 text-xs not-italic">·</span>
-                          )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[8px] sm:text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-bold">
+                          YOUR MATCH
                         </span>
-                      ))}
-                    </div>
+                        <span className="font-mono text-[8px] tracking-wider text-stone/50 uppercase">
+                          {specsLine}
+                        </span>
+                      </div>
 
-                    {/* Sommelier Story Description */}
-                    <p className="text-sm sm:text-base text-[#DCD7D0] font-sans leading-relaxed mb-6 font-light">
-                      {primaryMatch.description}
-                    </p>
+                      <h2 className="font-serif text-lg text-white font-medium truncate">
+                        {primaryMatch.fullName}
+                      </h2>
 
-                    {/* Tasting Notes Palate */}
-                    <div className="mb-5">
-                      <span className="text-[9px] font-mono tracking-[0.24em] uppercase text-stone/40 block mb-2">
-                        TASTING PALATE
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {primaryMatch.tastingNotes.map((note) => (
-                          <span
-                            key={note}
-                            className="text-xs font-mono tracking-wider text-[#FAF7F2] bg-[#161412] border border-[#C6A15B]/30 px-3.5 py-1.5 rounded-full"
-                          >
-                            {note}
+                      <p className="text-stone/75 text-[11px] font-light leading-snug line-clamp-2">
+                        {primaryMatch.description}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="font-serif text-lg text-[#F5CE76]">
+                            {Math.round(matchScore)}%
                           </span>
-                        ))}
+                          <span className="font-mono text-[8px] text-stone/50 tracking-wider">MATCH</span>
+                        </div>
+
+                        <div className="flex gap-1">
+                          {primaryMatch.descriptors.slice(0, 2).map((d) => (
+                            <span key={d} className="px-2 py-0.5 rounded text-[9px] font-mono bg-white/5 border border-white/10 text-stone/80">
+                              {d}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Cask & Pairing Architecture Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4 mb-6 border-y border-[#C6A15B]/20 text-xs">
-                      <div className="bg-[#12100d]/80 border border-[#C6A15B]/20 rounded-xs p-3.5">
-                        <span className="text-[9px] font-mono tracking-[0.24em] uppercase text-[#C6A15B] block mb-1">
-                          CASK MATURATION
-                        </span>
-                        <span className="text-[#D8D4CE] font-sans text-xs font-light">
-                          {primaryMatch.cask}
-                        </span>
-                      </div>
-                      <div className="bg-[#12100d]/80 border border-[#C6A15B]/20 rounded-xs p-3.5">
-                        <span className="text-[9px] font-mono tracking-[0.24em] uppercase text-[#C6A15B] block mb-1">
-                          SERVING RITUAL
-                        </span>
-                        <span className="text-[#D8D4CE] font-sans text-xs font-light">
-                          {primaryMatch.servingStyle}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-4 pt-1">
-                      <Link
-                        to={`/spirit/${primaryMatch.id}`}
-                        className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-sm bg-[#C6A15B] hover:bg-[#D8BD7A] text-[#080807] font-mono font-medium text-xs tracking-[0.22em] uppercase transition-all duration-300 shadow-[0_0_25px_rgba(198,161,91,0.35)] hover:-translate-y-0.5"
-                      >
-                        <span>Explore your match</span>
-                        <span className="transition-transform duration-300 group-hover:translate-x-1 font-bold">
-                          →
-                        </span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={onRestart}
-                        className="inline-flex items-center gap-2 px-5 py-3.5 rounded-sm border border-[#C6A15B]/30 hover:border-[#C6A15B] text-stone/70 hover:text-ivory font-mono text-xs tracking-[0.22em] uppercase transition-all duration-300 cursor-pointer bg-[#0e0d0b]/70 hover:bg-[#141210]"
-                      >
-                        <span>↻ Recalibrate Taste</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Secondary Cellar Recommendations */}
-                {secondaryMatches.length > 0 && (
-                  <div className="pt-6 border-t border-white/10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <span className="text-[9px] font-mono tracking-[0.25em] uppercase text-[#C6A15B]/80 block mb-0.5">
-                          ALTERNATIVE EXPRESSIONS
-                        </span>
-                        <h3 className="font-serif text-lg text-[#FAF7F2] font-normal">
-                          Other Bottles From Your Spectrum
-                        </h3>
-                      </div>
-                      <Link
-                        to="/collection"
-                        className="text-[10px] font-mono tracking-widest text-stone/50 hover:text-ivory uppercase"
-                      >
-                        View Full Cellar →
-                      </Link>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {secondaryMatches.map((spirit) => (
-                        <div
-                          key={spirit.id}
-                          className="bg-[#100f0d] border border-white/10 hover:border-[#C6A15B]/40 rounded-xs p-3 flex items-center justify-between gap-3 transition-colors"
+                      <div className="flex flex-col gap-2 pt-1.5 border-t border-white/10">
+                        <Link
+                          to={`/spirit/${primaryMatch.id}`}
+                          className="w-full py-2.5 text-center rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 text-[#FAF7F2] font-mono text-[10px] uppercase font-semibold tracking-[0.22em] shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-14 bg-[#080807] rounded-xs p-1 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
-                              <img
-                                src={spirit.image}
-                                alt={spirit.fullName}
-                                className="max-h-full max-w-full object-contain"
-                              />
+                          <span>EXPLORE THIS EXPRESSION</span>
+                          <span className="text-[#F5CE76]">→</span>
+                        </Link>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCellarModal(true)}
+                            className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
+                          >
+                            <span>CELLAR SELECTION</span>
+                            <span className="text-[#F5CE76] text-xs">→</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onRestart}
+                            className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
+                          >
+                            <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
+                            <span>RECALIBRATE</span>
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="mob-flavour-card"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25 }}
+                      className="rounded-xl p-3 bg-[#0c0a08]/85 backdrop-blur-2xl border border-[#C6A15B]/35 shadow-xl space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[8px] sm:text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-bold">
+                          FLAVOUR PROFILE
+                        </span>
+                        <span className="font-mono text-[8px] tracking-wider text-stone/50 uppercase">
+                          5 DIMENSIONS
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        {flavourBars.slice(0, 4).map((fb) => (
+                          <div key={fb.label} className="space-y-0.5">
+                            <div className="flex justify-between text-[9px] font-mono">
+                              <span className="text-stone/60">{fb.label}</span>
+                              <span className="text-[#F5CE76]">{fb.val}%</span>
                             </div>
-                            <div>
-                              <span className="text-[8px] font-mono tracking-widest uppercase text-stone/40 block">
-                                {spirit.category}
-                              </span>
-                              <h4 className="font-serif text-xs text-[#FAF7F2] line-clamp-1">
-                                {spirit.fullName}
-                              </h4>
-                              <span className="text-[9px] font-mono text-[#C6A15B]/80">
-                                {spirit.origin}
-                              </span>
+                            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-[#C6A15B] to-[#F5CE76]" style={{ width: `${fb.val}%` }} />
                             </div>
                           </div>
+                        ))}
+                      </div>
 
-                          <Link
-                            to={`/spirit/${spirit.id}`}
-                            className="text-[10px] font-mono text-gold-light hover:underline shrink-0"
+                      <div className="flex flex-col gap-2 pt-1.5 border-t border-white/10">
+                        <Link
+                          to={`/spirit/${primaryMatch.id}`}
+                          className="w-full py-2.5 text-center rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 text-[#FAF7F2] font-mono text-[10px] uppercase font-semibold tracking-[0.22em] shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <span>EXPLORE THIS EXPRESSION</span>
+                          <span className="text-[#F5CE76]">→</span>
+                        </Link>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCellarModal(true)}
+                            className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
                           >
-                            View →
-                          </Link>
+                            <span>CELLAR SELECTION</span>
+                            <span className="text-[#F5CE76] text-xs">→</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onRestart}
+                            className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
+                          >
+                            <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
+                            <span>RECALIBRATE</span>
+                          </button>
                         </div>
-                      ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* ── BOTTOM NAVBAR: DISCOVERY COMPLETE ── */}
+            <motion.footer
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+              className="relative z-20 w-full max-w-5xl mx-auto px-4 sm:px-10 pb-4 sm:pb-6 pt-1 flex items-center justify-center shrink-0 mt-auto pointer-events-auto"
+            >
+              <div className="flex items-center gap-2.5 px-5 sm:px-6 py-1.5 sm:py-2 rounded-full border border-[#C6A15B]/40 bg-black/80 backdrop-blur-md shadow-[0_2px_14px_rgba(198,161,91,0.22)] shrink-0">
+                <span className="w-2 h-2 rounded-full bg-[#C6A15B] animate-pulse shadow-[0_0_8px_#C6A15B]" />
+                <span className="text-[#FAF7F2] font-mono text-[9px] sm:text-[11px] tracking-[0.32em] uppercase font-semibold">
+                  DISCOVERY COMPLETE
+                </span>
+                <span className="w-2 h-2 rounded-full bg-[#C6A15B] animate-pulse shadow-[0_0_8px_#C6A15B]" />
+              </div>
+            </motion.footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+
+      {/* ── 5. CELLAR SELECTION SLIDE-OVER MODAL ── */}
+      <AnimatePresence>
+        {showCellarModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full max-w-4xl bg-[#0e0d0b] border border-[#C6A15B]/40 rounded-xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)]"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+                <div>
+                  <span className="text-[9px] font-mono tracking-[0.35em] text-[#C6A15B] uppercase block">
+                    THE CELLAR SPECTRUM
+                  </span>
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#FAF7F2] font-normal">
+                    Expressions From Your Profile
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCellarModal(false)}
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-stone/60 hover:text-white hover:border-gold transition-colors"
+                >
+                  <IoClose className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                {secondaryMatches.slice(0, 3).map((spirit) => (
+                  <Link
+                    key={spirit.id}
+                    to={`/spirit/${spirit.id}`}
+                    className="group bg-[#14120f] border border-white/10 hover:border-[#C6A15B]/60 rounded-lg p-4 flex flex-col items-center justify-between transition-all duration-300 hover:shadow-[0_10px_25px_rgba(198,161,91,0.2)]"
+                  >
+                    <div className="h-36 w-full flex items-center justify-center my-2">
+                      <img
+                        src={spirit.image}
+                        alt={spirit.fullName}
+                        className="max-h-full max-w-full object-contain filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform"
+                      />
                     </div>
-                  </div>
-                )}
+                    <div className="text-center w-full pt-2 border-t border-white/5">
+                      <h4 className="font-serif text-sm text-[#FAF7F2] truncate group-hover:text-[#E5C378]">
+                        {spirit.fullName}
+                      </h4>
+                      <span className="text-[8px] font-mono text-[#C6A15B]/80 uppercase tracking-widest block mt-0.5">
+                        {spirit.origin}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-2">
+                <Link
+                  to="/collection"
+                  className="px-6 py-2.5 rounded-full border border-[#C6A15B] text-[#FAF7F2] hover:bg-[#C6A15B]/20 font-mono text-[10px] uppercase tracking-[0.25em] transition-all shadow-[0_0_15px_rgba(198,161,91,0.25)]"
+                >
+                  Explore Full Cellar Collection →
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowCellarModal(false)}
+                  className="font-mono text-[10px] text-stone/50 hover:text-white uppercase tracking-wider transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ── Discreet Bottom Status & Scroll Guide (No Tabs) ── */}
-      <footer className="relative z-30 flex items-center justify-between px-4 py-2 border-t border-[#C6A15B]/15 text-[10px] font-mono text-stone/40 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-1 rounded-full bg-[#C6A15B]" />
-          <span className="uppercase tracking-widest text-[#C6A15B]/80">
-            {stage === 0 && '01 · Palate Synthesis'}
-            {stage === 1 && '02 · The Sanctuary Bottle'}
-            {stage === 2 && '03 · Tasting Dossier'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {stage > 0 && (
-            <button
-              type="button"
-              onClick={() => goToStage(stage - 1)}
-              className="hover:text-[#FAF7F2] transition-colors cursor-pointer tracking-wider uppercase"
-            >
-              ↑ Previous
-            </button>
-          )}
-          {stage < 2 && (
-            <button
-              type="button"
-              onClick={() => goToStage(stage + 1)}
-              className="text-[#C6A15B] hover:text-[#FAF7F2] transition-colors cursor-pointer tracking-wider uppercase flex items-center gap-1"
-            >
-              <span>Scroll to advance</span>
-              <span>↓</span>
-            </button>
-          )}
-        </div>
-      </footer>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

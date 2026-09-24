@@ -6,7 +6,7 @@ interface CollectionGridProps {
   spirits: Spirit[]
 }
 
-const categories: SpiritCategory[] = ['Whisky', 'Rum', 'Gin', 'Tequila', 'Cognac', 'Vodka']
+const categories: SpiritCategory[] = ['Single Malt', 'Blend', 'Whisky', 'Rum', 'Gin', 'Tequila', 'Cognac', 'Vodka']
 
 export default function CollectionGrid({ spirits }: CollectionGridProps) {
   const [active, setActive] = useState<SpiritCategory | 'All'>('All')

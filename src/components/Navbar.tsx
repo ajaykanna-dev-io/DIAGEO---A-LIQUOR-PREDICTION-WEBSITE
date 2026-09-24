@@ -28,7 +28,7 @@ export default function Navbar() {
       }`}
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10 h-16 sm:h-20 flex items-center justify-between gap-4 sm:gap-6">
-        <BrandSettlingLogo subtitle="Haute Distillerie" />
+        <BrandSettlingLogo/>
 
         <motion.ul
           initial={{ opacity: 0 }}

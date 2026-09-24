@@ -1,5 +1,7 @@
 export type SpiritCategory =
   | 'Whisky'
+  | 'Single Malt'
+  | 'Blend'
   | 'Rum'
   | 'Gin'
   | 'Tequila'
@@ -47,6 +49,7 @@ export type SensoryObjectType =
   | 'bronze-instrument'
   | 'obsidian-beaker'
   | 'fluted-glass'
+  | string
 
 export type EssenceVaporType =
   | 'mist'
@@ -54,6 +57,7 @@ export type EssenceVaporType =
   | 'golden-spark'
   | 'peat-smoke'
   | 'botanical-dew'
+  | string
 
 export interface QuestionOption {
   id: string
@@ -81,10 +85,18 @@ export interface Question {
   id: string
   index: number
   prompt: string
+  headline?: string
+  sommelierPrompt?: string
   stageName: string
   stageSubtitle: string
   sommelierNote: string
   options: QuestionOption[]
+  image?: string
+  flavorName?: string
+  orderId?: string
+  intro?: string
+  flavour?: string | null
 }
 
 export type Answers = Record<string, string>
+

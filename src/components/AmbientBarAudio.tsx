@@ -6,14 +6,14 @@ import { barMusic } from '@/utils/barMusicEngine'
 interface AmbientBarAudioProps {
   className?: string
   isMobile?: boolean
+  showLabel?: boolean
 }
 
 /**
  * AmbientBarAudio
- * Ultra-premium icon-only speakeasy bar audio controller for DIAGEO Haute Distillerie.
- * Displays only luxury react-icons and dynamic scrolling equalizer visualizer (no text).
+ * Speakeasy bar audio controller for DIAGEO Haute Distillerie.
  */
-export default function AmbientBarAudio({ className = '', isMobile = false }: AmbientBarAudioProps) {
+export default function AmbientBarAudio({ className = '', isMobile = false, showLabel: _showLabel = true }: AmbientBarAudioProps) {
   const [isPlaying, setIsPlaying] = useState(barMusic.getIsPlaying())
   const [isMuted, setIsMuted] = useState(barMusic.getIsMuted())
 
@@ -43,42 +43,42 @@ export default function AmbientBarAudio({ className = '', isMobile = false }: Am
     <button
       type="button"
       onClick={handleToggle}
-      className={`group relative inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-500 cursor-pointer overflow-hidden ${
-        isMobile ? 'h-10 px-4' : 'h-9 px-3'
+      className={`group relative inline-flex items-center justify-center gap-2 sm:gap-2.5 rounded-full border transition-all duration-500 cursor-pointer overflow-hidden ${
+        isMobile ? 'h-9 px-3' : 'h-8 sm:h-9 px-2.5 sm:px-3.5'
       } ${
         isSoundActive
-          ? 'border-[#C6A15B]/50 hover:border-[#C6A15B] bg-[#14110c]/90 hover:bg-[#1c1811] text-[#FAF7F2] shadow-[0_2px_18px_rgba(198,161,91,0.22)]'
-          : 'border-white/10 hover:border-[#C6A15B]/40 bg-[#0c0b0a]/75 hover:bg-[#141210] text-stone hover:text-[#FAF7F2] shadow-[0_2px_10px_rgba(0,0,0,0.5)]'
+          ? 'border-[#C6A15B] hover:border-[#F5CE76] bg-gradient-to-r from-[#17130e] via-[#241c12] to-[#17130e] hover:via-[#332718] text-[#FAF7F2] shadow-[0_4px_18px_rgba(0,0,0,0.85),0_0_16px_rgba(198,161,91,0.4)]'
+          : 'border-[#C6A15B]/75 hover:border-[#E5C378] bg-gradient-to-r from-[#14110d] via-[#1c1610] to-[#14110d] hover:via-[#261e14] text-[#FAF7F2] shadow-[0_4px_16px_rgba(0,0,0,0.8),0_0_12px_rgba(198,161,91,0.25)]'
       } ${className}`}
       title={isSoundActive ? 'Bar Music Playing · Click to Mute' : 'Bar Music Muted · Click to Play'}
       aria-label={isSoundActive ? 'Mute Bar Music' : 'Unmute Bar Music'}
     >
       {/* Ambient gold light sweep on hover */}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[#C6A15B]/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[#C6A15B]/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"
         aria-hidden="true"
       />
 
-      {/* Musical Note Icon from react-icons */}
-      <div className="relative flex items-center justify-center">
+      {/* Musical Note Icon in radiant logo gold palette */}
+      <div className="relative flex items-center justify-center shrink-0">
         {isSoundActive ? (
           <motion.div
-            animate={{ scale: [1, 1.08, 1] }}
+            animate={{ scale: [1, 1.12, 1] }}
             transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
-            className="text-[#E5C378] drop-shadow-[0_0_8px_rgba(198,161,91,0.5)]"
+            className="text-[#F5CE76] drop-shadow-[0_0_10px_rgba(198,161,91,0.7)]"
           >
             <IoMusicalNotes className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
           </motion.div>
         ) : (
-          <div className="text-stone/50 group-hover:text-stone/80 transition-colors duration-300">
+          <div className="text-[#E5C378] group-hover:text-[#FFF8DB] transition-colors duration-300 drop-shadow-[0_0_8px_rgba(198,161,91,0.4)]">
             <IoMusicalNotesOutline className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
           </div>
         )}
       </div>
 
-      {/* Traditional Scrolling / Dancing Equalizer Waveform */}
+      {/* Traditional Scrolling / Dancing Equalizer Waveform in Gold Palette */}
       <div
-        className="flex items-end gap-[2.5px] h-3.5 w-3.5 justify-center py-px"
+        className="flex items-end gap-[2.5px] h-3.5 w-3.5 justify-center py-px shrink-0"
         aria-hidden="true"
       >
         {barHeights.map((bar, i) => (
@@ -87,7 +87,7 @@ export default function AmbientBarAudio({ className = '', isMobile = false }: Am
             animate={
               isSoundActive
                 ? { height: bar.active }
-                : { height: '2.5px' }
+                : { height: '3.5px' }
             }
             transition={
               isSoundActive
@@ -99,11 +99,7 @@ export default function AmbientBarAudio({ className = '', isMobile = false }: Am
                   }
                 : { duration: 0.3 }
             }
-            className={`w-[2px] rounded-full transition-colors duration-300 ${
-              isSoundActive
-                ? 'bg-gradient-to-t from-[#C6A15B] via-[#E5C378] to-[#FAF7F2] shadow-[0_0_5px_rgba(198,161,91,0.6)]'
-                : 'bg-stone/30'
-            }`}
+            className="w-[2px] rounded-full transition-colors duration-300 bg-gradient-to-t from-[#C6A15B] via-[#E5C378] to-[#FFF8DB] shadow-[0_0_6px_rgba(198,161,91,0.6)]"
           />
         ))}
       </div>

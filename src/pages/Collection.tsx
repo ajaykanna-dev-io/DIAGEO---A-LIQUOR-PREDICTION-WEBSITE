@@ -16,13 +16,12 @@ export default function Collection() {
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="lg:col-span-6"
           >
-            <SectionLabel className="mb-4 sm:mb-5">The Collection</SectionLabel>
+            <SectionLabel className="mb-4 sm:mb-5 text-[#C6A15B]">The Collection</SectionLabel>
             <h1 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-ivory text-balance leading-[1.06]">
               A curated world of spirits.
             </h1>
             <p className="mt-6 sm:mt-8 text-stone max-w-lg leading-relaxed text-base sm:text-lg">
-              Six categories, each represented by expressions chosen for character rather than
-              volume. Explore by category, or let discovery choose for you.
+              Twenty-three distinguished expressions across Single Malts and Master Blends, chosen for character, terroir, and craft. Explore by category, or let discovery choose for you.
             </p>
 
             {/* Animated gold divider */}

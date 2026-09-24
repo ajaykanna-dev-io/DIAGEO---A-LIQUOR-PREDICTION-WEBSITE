@@ -1,0 +1,717 @@
+{
+  "pageProps": {
+    "locale": "en-in",
+    "localePage": {
+      "footer": null,
+      "message": null,
+      "urlSegment": "en-in",
+      "url": "/en-in",
+      "locale": "en-in"
+    },
+    "currentPageContent": {
+      "meta": [
+        {
+          "contentType": "metaHeader",
+          "metaTitle": "Find your flavour",
+          "metaKeywords": null,
+          "canonicalElementTag": null,
+          "openGraphTags": null
+        }
+      ],
+      "body": [
+        {
+          "contentType": "quiz",
+          "question": [
+            {
+              "orderId": "1",
+              "intro": "CHILLIES: ",
+              "flavour": "CAN'T GET ENOUGH OR CAN'T STAND THEM?",
+              "option1": "No, thanks.",
+              "option2": "Be right back, tearing up!",
+              "option3": "A hint is fine...",
+              "option4": "When I'm feeling brave...",
+              "option5": "Bring it on!",
+              "flavorName": "chillies",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/wfem2ohy/chillies.jpg",
+                  "_id": "38ce48b7-6bf8-4156-9d90-ceab7c48da1b"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "2",
+              "intro": "THEY'RE SERVING COCONUT BARFIS FOR DESSERT. WHAT DO YOU SAY?",
+              "flavour": null,
+              "option1": "Nope. Nope. Nope.",
+              "option2": "Any other options?",
+              "option3": "Just one for me!",
+              "option4": "Cool, I'll have a few.",
+              "option5": "I'm nuts for coconuts!",
+              "flavorName": "coconut",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/jbveutiz/coconut.jpg",
+                  "_id": "4d4a6a4e-d419-4c12-bbdb-66a2ca17e06d"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "3",
+              "intro": "SOMEONE'S BAKING APPLE PIES.",
+              "flavour": "WHAT'S YOUR MOVE?",
+              "option1": "Literally anything else!",
+              "option2": "No, not for me!",
+              "option3": "I'll have a bite or two.",
+              "option4": "Maybe a couple...",
+              "option5": "Befriend the baker asap!",
+              "flavorName": "appleCooked",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/i4vgpy0u/apple-cooked.jpg",
+                  "_id": "e367aa41-8854-42a4-8dca-b1a9108ebd4f"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "4",
+              "intro": "IS CARAMEL ",
+              "flavour": "POPCORN YOUR IDEAL MOVIE DATE?",
+              "option1": "Doesn't even make the list.",
+              "option2": "Salted for me, thanks.",
+              "option3": "Ideal is an overstatement...",
+              "option4": "It’s up there, for sure.",
+              "option5": "I'll eat a whole bucket.",
+              "flavorName": "caramelPopcorns",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/wrmj5tc0/caramel-popcorn.jpg",
+                  "_id": "cc9f58b2-115a-40d2-8892-063f6c16544e"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "5",
+              "intro": "DO YOU REACH FOR ",
+              "flavour": "GREEN TEA ON YOUR TEA BREAKS?",
+              "option1": "Yuck, never!",
+              "option2": "What else have you got?",
+              "option3": "Well, if it's good for you...",
+              "option4": "It's my go-to!",
+              "option5": "Not just tea breaks!",
+              "flavorName": "greenTea",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/aqidg2gq/green-tea.jpg",
+                  "_id": "70331002-b9d0-4433-ad97-0666a8fab35a"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "6",
+              "intro": "HOW LIKELY ARE YOU TO ",
+              "flavour": "PICK A JUICY PEAR FROM THE FRUIT BOWL?",
+              "option1": "Wouldn't even touch it!",
+              "option2": "Depends on the context.",
+              "option3": "Don’t mind it!",
+              "option4": "Pretty likely! I love it.",
+              "option5": "My first choice, always!",
+              "flavorName": "pear",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/pe5lhou1/pear.jpg",
+                  "_id": "bab33e7f-ec9b-4c37-b964-20c07073b928"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "7",
+              "intro": "IT'S CURRY NIGHT, YOU'RE COOKING. ",
+              "flavour": "HOW MUCH GINGER'S GOING IN?",
+              "option1": "Not near my curry!",
+              "option2": "Well, you'll almost taste it.",
+              "option3": "Just enough...",
+              "option4": "Loads!",
+              "option5": "As much as possible!",
+              "flavorName": "freshGinger",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/5mcl3vqh/fresh-ginger.jpg",
+                  "_id": "d6be05fd-b007-4751-b69d-64318f70b90f"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "8",
+              "intro": "HOW OFTEN DO YOU REACH FOR ",
+              "flavour": "THE CUMIN WHEN YOU'RE COOKING?",
+              "option1": "Not in my kitchen!",
+              "option2": "Do I even have any?",
+              "option3": "At least twice a month.",
+              "option4": "Every week!",
+              "option5": "Every day!",
+              "flavorName": "cumin",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/yk0phpk2/cumin.jpg",
+                  "_id": "bdf3b4c4-ad5c-4bca-b34f-5c3e1e9484a1"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "9",
+              "intro": "YOU BITE INTO A BUN. ",
+              "flavour": "IS THAT... CINNAMON? YOU FEEL...",
+              "option1": "Disgusted.",
+              "option2": "Annoyed.",
+              "option3": "Fine...",
+              "option4": "Pleased.",
+              "option5": "Thrilled!",
+              "flavorName": "cinnamon",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/0x0h0vxg/cinnamon.jpg",
+                  "_id": "567df5d3-73e6-4865-b019-e6c57fb5bd31"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "10",
+              "intro": "FANCY SOME ",
+              "flavour": "PERFECTLY CHARRED BAIGAN BHARTA?",
+              "option1": "Eww... Not for me.",
+              "option2": "Can't say I trust it.",
+              "option3": "Perfect, you say?",
+              "option4": "I hope you don't want any...",
+              "option5": "Sure do!",
+              "flavorName": "burntBrinjal",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/iw2pivom/burnt-brinjal.jpg",
+                  "_id": "55e4b943-f7cc-4f03-b67d-6ddff576ddca"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "11",
+              "intro": "DO YOU LIKE ",
+              "flavour": "YOUR BUTTER CHICKEN AND DAL MAKHNI SMOKY?",
+              "option1": "Absolutely not.",
+              "option2": "Plain for me.",
+              "option3": "Okaaaaaaay...",
+              "option4": "(Sniffs) Ah, yes, YES!",
+              "option5": "Total smokeshow!",
+              "flavorName": "burntWood",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/i0ipfibl/burnt-wood.jpg",
+                  "_id": "a0f29040-a32b-4d65-a7db-51e8f622ee7c"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "12",
+              "intro": "DO CITRUSY FLAVOURS LIKE LEMONGRASS",
+              "flavour": "EXCITE YOUR TASTE BUDS?",
+              "option1": "0%",
+              "option2": "25%",
+              "option3": "50%",
+              "option4": "75%",
+              "option5": "100%",
+              "flavorName": "lemongrass",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/dyjld114/lemongrass.jpg",
+                  "_id": "efb11218-327e-4c74-ab0d-72280775190b"
+                },
+                "altText": "image"
+              }
+            },
+            {
+              "orderId": "13",
+              "intro": "CREAMY, REFRESHING LASSI. ",
+              "flavour": "LOVE IT OR LOATHE IT?",
+              "option1": "Definitely loathe",
+              "option2": "I don’t like it",
+              "option3": "It’s fine",
+              "option4": "I like it",
+              "option5": "Definitely love",
+              "flavorName": "lassi",
+              "videoMobile": null,
+              "videoPc": null,
+              "video4k": null,
+              "image": {
+                "imageS": {
+                  "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/ib4d4ms3/lassi.jpg",
+                  "_id": "322f7d46-ab5d-485a-9ea3-eb67644db519"
+                },
+                "altText": "image"
+              }
+            }
+          ],
+          "cta": {
+            "cta": {
+              "name": "CONTINUE"
+            },
+            "show": true,
+            "type": null
+          },
+          "lastCta": {
+            "cta": {
+              "name": "UNLOCK YOUR TASTE PROFILE"
+            },
+            "show": true,
+            "type": null
+          },
+          "animation": null,
+          "video4itemsPc": {
+            "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/1tylxt10/wyw-4-loading_pc.mp4",
+            "_id": "cfbbf1f4-6e7a-4662-89cd-4eed882b5578"
+          },
+          "video4itemsMobile": {
+            "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/2luk2141/wyw-4-loading_mobile.mp4",
+            "_id": "6faee8ca-8edb-49d5-a43a-294464253be0"
+          },
+          "video6itemsPc": {
+            "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/4lmbafhc/wyw-6-loading_pc.mp4",
+            "_id": "1410d8da-50e2-4ab4-8784-2aa5d70a5048"
+          },
+          "video6itemsMobile": {
+            "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/cmpgj3d2/wyw-6-loading_mobile.mp4",
+            "_id": "f4641e3b-607c-478d-ad30-c1efaf3a8ef8"
+          },
+          "loading": "We've creating your unique taste profile",
+          "backCTA": null
+        }
+      ],
+      "urlSegment": "quiz",
+      "url": "/en-in/quiz",
+      "locale": "en-in"
+    },
+    "contactData": {
+      "id": "Contact",
+      "_url": "/en-in/data/contact/contact",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "Please enter your first name",
+      "firstNameRequireValidation": "Please enter first name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Please enter your last name",
+      "lastNameRequireValidation": "Please enter last name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Please enter your email",
+      "emailRequiredValidation": "Please enter an email address",
+      "emailValidation": "Please enter a valid email address",
+      "countryOfResidenceLabel": "Location of residence",
+      "countryOfResidenceRequiredValidation": "Please select a location of residence",
+      "countryOfResidenceValues": "|Select\nAX|Åland Islands\nAF|Afghanistan\nAL|Albania\nDZ|Algeria\nAS|American Samoa\nAD|Andorra\nAO|Angola\nAI|Anguilla\nAQ|Antarctica\nAG|Antigua And Barbuda\nAR|Argentina\nAM|Armenia\nAW|Aruba\nAU|Australia\nAT|Austria\nAZ|Azerbaijan\nBS|Bahamas\nBH#21|Bahrain\nBD|Bangladesh\nBB|Barbados\nBY|Belarus\nBE|Belgium\nBZ|Belize\nBJ#20|Benin\nBM|Bermuda\nBT|Bhutan\nBO|Bolivia\nBQ|Bonaire, Sint Eustatius and Saba\nBA|Bosnia And Herzegovina\nBW|Botswana\nBR|Brazil\nBN|Brunei\nBG|Bulgaria\nBF|Burkina Faso\nBI|Burundi\nKH#21|Cambodia\nCM#21|Cameroon\nCA#19|Canada\nCV|Cape Verde\nKY|Cayman Islands\nCF|Central Africa\nTD|Chad\nCL|Chile\nCN|China Mainland\nCX|Christmas Island\nCC|Cocos Islands\nCO|Colombia\nKM|Comoros\nCD|Congo, Democratic Republic of the\nCG|Congo, Republic of the\nCK|Cook Islands\nCR|Costa Rica\nCI|Cote D'ivoire\nHR|Croatia\nCU|Cuba\nCW|Curaçao\nCY|Cyprus\nCZ|Czech Republic\nDK|Denmark\nDJ|Djibouti\nDM|Dominica\nDO|Dominican Republic\nEC|Ecuador\nEG#21|Egypt\nSV|El Salvador\nGQ|Equatorial Guinea\nER#25|Eritrea\nEE|Estonia\nET|Ethiopia\nFK|Falkland Islands\nFO|Faroe Islands\nFJ|Fiji\nFI|Finland\nFR|France\nGF|French Guiana\nPF|French Polynesia\nTF|French Southern Territories\nGA|Gabon\nGE|Georgia\nDE|Germany\nGH|Ghana\nGI|Gibraltar\nGR|Greece\nGL|Greenland\nGD|Grenada\nGP|Guadaloupe\nGU|Guam\nGT|Guatemala\nGG|Guernsey\nGN|Guinea\nGW|Guinea-Bissau\nGY|Guyana\nHT|Haiti\nHM|Heard Island & McDonald Islands\nVA|Holy See\nHN|Honduras\nHK|Hong Kong S.A.R\nHU|Hungary\nIS#20|Iceland\nIN#21|India\nIO|Indian Ocean Territory\nID#21|Indonesia\nIQ#21|Iraq\nIE|Ireland\nIM|Isle Of Man\nIL|Israel\nIT|Italy\nJM|Jamaica\nJP#20|Japan\nJE|Jersey\nJO|Jordan\nKZ#21|Kazakhstan\nKE|Kenya\nKI|Kiribati\nKR#19|Korea, Republic of\nKW|Kuwait\nKG|Kyrgyzstan\nLA|Lao People's Democratic Republic\nLV|Latvia\nLB|Lebanon\nLS#21|Lesotho\nLR|Liberia\nLY|Libya\nLI|Liechtenstein\nLT|Lithuania\nLU|Luxembourg\nMO|Macau S.A.R\nMK|Macedonia\nMG|Madagascar\nMW|Malawi\nMY|Malaysia\nMV|Maldives\nML|Mali\nMT|Malta\nMH#21|Marshall Islands\nMQ|Martinique\nMR#21|Mauritania\nMU|Mauritius\nYT|Mayotte\nMX|Mexico\nFM#21|Micronesia\nMD|Moldova\nMC|Monaco\nMN|Mongolia\nME|Montenegro\nMS|Montserrat\nMA|Morocco\nMZ|Mozambique\nMM|Myanmar\nNA|Namibia\nNR#21|Nauru\nNP|Nepal\nNL|Netherlands\nNC|New Caledonia\nNZ|New Zealand\nNI|Nicaragua\nNE|Niger\nNG|Nigeria\nNU|Niue\nNF|Norfolk Island\nMP|Northern Mariana Islands\nNO|Norway\nOM#21|Oman\nPK|Pakistan\nPW#21|Palau\nPS|Palestine, State of\nPA|Panama\nPG|Papua New Guinea\nPY#20|Paraguay\nPE|Peru\nPH|Philippines\nPN|Pitcairn Islands\nPL|Poland\nPT|Portugal\nPR|Puerto Rico\nQA#19|Qatar\nRE|Reunion\nRO|Romania\nRU|Russian Federation\nRW|Rwanda\nBL|Saint Barthélemy\nSH|Saint Helena\nKN|Saint Kitts And Nevis\nLC|Saint Lucia\nMF|Saint Martin\nVC|Saint Vincent And The Grenadines\nPM|Saint-Pierre Et Miquelon\nWS|Samoa\nSM|San Marino\nST|Sao Tome and Principe\nSA|Saudi Arabia\nSN|Senegal\nRS|Serbia, Republic of\nSC|Seychelles\nSL|Sierra Leone\nSG|Singapore\nSX|Sint Maarten\nSK|Slovakia\nSI|Slovenia\nSB#21|Solomon Islands\nSO|Somalia\nZA|South Africa\nGS|South Georgia & S. Sandwich Islands\nSS|South Sudan\nES|Spain\nLK#21|Sri Lanka\nSD|Sudan\nSR|Suriname\nSJ|Svalbard and Jan Mayen\nSZ|Swaziland\nSE|Sweden\nCH|Switzerland\nSY|Syria\nTW|Taiwan\nTJ|Tajikistan\nTZ|Tanzania, United Republic of\nTH#20|Thailand\nGM|The Gambia\nTL|Timor-Leste\nTG|Togo\nTK|Tokelau\nTO|Tonga\nTT|Trinidad And Tobago\nTN|Tunisia\nTR|Turkey\nTM|Turkmenistan\nTC|Turks And Caicos Islands\nTV|Tuvalu\nUG|Uganda\nVG|UK Virgin Islands\nUA|Ukraine\nAE#21|United Arab Emirates\nGB|United Kingdom\nUS#21|United States\nUM|United States Minor Outlying Islands\nUY|Uruguay\nVI|US Virgin Islands\nUZ#20|Uzbekistan\nVU|Vanuatu\nVE|Venezuela\nVN|Vietnam\nWF|Wallis and Futuna\nEH|Western Sahara\nYE|Yemen\nZM|Zambia\nZW|Zimbabwe",
+      "dateOfBirthLabel": "Date of birth",
+      "dateOfBirthRequiredValidation": "Please enter the Date of Birth",
+      "dateOfBirthDayField": "1|1\n2|2\n3|3\n4|4\n5|5\n6|6\n7|7\n8|8\n9|9\n10|10\n11|11\n12|12\n13|13\n14|14\n15|15\n16|16\n17|17\n18|18\n19|19\n20|20\n21|21\n22|22\n23|23\n24|24\n25|25\n26|26\n27|27\n28|28\n29|29\n30|30\n31|31",
+      "dateOfBirthMonthField": "1|January\n2|February\n3|March\n4|April\n5|May\n6|June\n7|July\n8|August\n9|September\n10|October\n11|November\n12|December",
+      "termOfUseLabelLabel": "I accept Diageo's Conditions of Use and acknowledge the Privacy & Cookie Notice. ",
+      "termOfUseLabelRequiredValidation": "Please accept the terms to proceed",
+      "marketingPreferencesByEmailLabel": "Tick here if you would like us to use your email to keep you informed about products, services and events from What's your Whisky & other Diageo brands. We’ll occasionally send you messages and show you ads for things that we think may be of interest. ",
+      "privacyAndCookieLabelLabel": "By signing up, you accept Diageo's Conditions of Use and acknowledge the Privacy & Cookie Notice. Please see the ‘Disclosure of your personal data’ section of our Privacy & Cookie Notice for further information on how we share your data with our marketing partners. You can unsubscribe at any time. ",
+      "privacyAndCookieLabelRequiredValidation": "Please accept the terms to proceed",
+      "errorTitle": "Oops! Something went wrong!",
+      "errorSummary": "Please try submitting again",
+      "overlayCRMCtaButtonDescription": "SIGN ME UP",
+      "belowLegalPermissibleAgeErrorText": "Consumer's age is below legal permissible age.",
+      "submitButtonText": "EMAIL ME",
+      "homeFormButtonText": "SIGN ME UP"
+    },
+    "settingsData": {
+      "id": "Settings",
+      "_url": "/en-in/data/settings/settings",
+      "defaultStore": [
+        {
+          "location": {
+            "id": "en_in_defaultStore",
+            "productList": [
+              {
+                "Location": {
+                  "name": "Black & White",
+                  "url": "/en-in/data/product/black-white/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Caol Ila 12",
+                  "url": "/en-in/data/product/caol-ila-12/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Cragganmore 12",
+                  "url": "/en-in/data/product/cragganmore-12/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Dalwhinnie 15",
+                  "url": "/en-in/data/product/dalwhinnie-15/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Glenkinchie 12",
+                  "url": "/en-in/data/product/glenkinchie-12/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "J&B Rare",
+                  "url": "/en-in/data/product/jb-rare/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker 18",
+                  "url": "/en-in/data/product/johnnie-walker-18/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Black",
+                  "url": "/en-in/data/product/johnnie-walker-black/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Blonde",
+                  "url": "/en-in/data/product/johnnie-walker-blonde/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Blue",
+                  "url": "/en-in/data/product/johnnie-walker-blue/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Double Black",
+                  "url": "/en-in/data/product/johnnie-walker-double-black/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Gold",
+                  "url": "/en-in/data/product/johnnie-walker-gold/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Johnnie Walker Red",
+                  "url": "/en-in/data/product/johnnie-walker-red/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Lagavulin 16",
+                  "url": "/en-in/data/product/lagavulin-16/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Oban 14",
+                  "url": "/en-in/data/product/oban-14/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Roe & Co",
+                  "url": "/en-in/data/product/roe-co/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Singleton of Dufftown 12",
+                  "url": "/en-in/data/product/singleton-of-dufftown-12/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Singleton of Dufftown 15",
+                  "url": "/en-in/data/product/singleton-of-dufftown-15/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Singleton of Dufftown 18",
+                  "url": "/en-in/data/product/singleton-of-dufftown-18/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Talisker 10",
+                  "url": "/en-in/data/product/talisker-10/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Talisker Dark Storm",
+                  "url": "/en-in/data/product/talisker-dark-storm/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Talisker Skye",
+                  "url": "/en-in/data/product/talisker-skye/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              },
+              {
+                "Location": {
+                  "name": "Vat 69",
+                  "url": "/en-in/data/product/vat-69/"
+                },
+                "callBackUrl": null,
+                "enablePartnership": false
+              }
+            ],
+            "subject": null,
+            "content": null,
+            "enableButtonStyleOnQuiz": false,
+            "timeToNextQuestion": null,
+            "storeName": "en_in_defaultStore",
+            "brandLogoURL": null,
+            "channel": {
+              "name": "Online Retailers",
+              "url": "/en-us/data/store-channels/online-retailers/"
+            },
+            "subject6": null,
+            "content6": null,
+            "recommendationSwitcher": false,
+            "animationOnForRetail": false,
+            "tokenName": "en_in_default",
+            "tokenDisableEnable": true,
+            "universalTokenDisableEnable": false,
+            "change4FlavorsTo6": false,
+            "buyOnlineButton": "BUY NOW",
+            "backTo": null,
+            "callBackURL": null,
+            "formSwitch": true,
+            "hideRecomendations": false,
+            "flavorsOnRecommendation": false,
+            "categoryCallbackCTA": false,
+            "categoryCallbackButtonText": null,
+            "hideCallbackWindow": false,
+            "postMessageSwitch": false,
+            "attractScreensShow": false,
+            "pageTimeOutSetting": 60,
+            "socialShareShow": true,
+            "fruityCallback": null,
+            "smokyCallback": null,
+            "spicyCallback": null,
+            "sweetCallback": null,
+            "tropicalCallback": null,
+            "freshCallback": null,
+            "creamyCallback": null,
+            "hideQuizAnimations": false,
+            "iframeLink": null,
+            "enableCRMOverlay": false,
+            "crmOverlayHeadline": null,
+            "crmOverlaySubheading": null,
+            "crmSignUpSuccessHeadline": null,
+            "crmSignUpSuccessSubheading": null,
+            "promoEmailHeadline": null,
+            "promoCode": null,
+            "ctaHeadline": null,
+            "ctaDescription": null,
+            "ctaCallbackURL": null,
+            "legalText": null,
+            "emailSubjectTemplate": null,
+            "emailContentTemplate": null,
+            "emailSubjectTemplate6": null,
+            "emailContentTemplate6": null,
+            "enablePromoBanner": false,
+            "promoHeading": null,
+            "promoDiscount": null,
+            "promoDescription": null,
+            "promoValidDateText": null,
+            "promoValidDate": "0001-01-01T00:00:00",
+            "promoCtaCopyCode": null,
+            "promoCtaCopied": null,
+            "promoCodeForBanner": null,
+            "promoCtaUrl": null,
+            "promoBackgroundColor": null,
+            "showGift": false,
+            "findThePerfectGiftText": null
+          }
+        }
+      ],
+      "drinkLogo": {
+        "url": "https://8gi8k2qpob.execute-api.eu-west-1.amazonaws.com/prod/files/cms/media/520dg2vm/3431803_drinkiq-logo-black.png",
+        "_id": "722335f9-c6ac-4af3-86a7-23ad4e8712d0"
+      },
+      "drinkLogoURL": "https://www.drinkiq.com/en-us/",
+      "homeFormShow": true,
+      "inPartnershipWith": "In Partnership with",
+      "flavorprintPartnerBrands": {
+        "cta": {
+          "id": "FlavorPrint Partner Brands",
+          "meta": null,
+          "body": [
+            {
+              "headline": "Our FlavorPrint\nPartner Brands",
+              "describe": "We’ve partnered with some of the best whisky producers from around the world with more to come. ",
+              "productWithLink": null
+            }
+          ]
+        },
+        "show": true,
+        "type": null
+      },
+      "logoText": "what's your whisky?",
+      "giftLogoText": "what's your whisky?gifting",
+      "apiType": "india"
+    },
+    "diagram": {
+      "id": "Diagram",
+      "_url": "/en-in/data/diagram/diagram",
+      "sweet": "SWEET",
+      "fruity": "FRUITY",
+      "tropical": "Tropical fruits",
+      "spicy": "SPICY",
+      "match": "Match",
+      "fresh": "FRESH",
+      "creamy": "CREAMY",
+      "smoky": "SMOKY",
+      "and": null
+    },
+    "globalMeta": {
+      "id": "Meta",
+      "_url": "/en-in/data/meta/meta",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Find Your Taste",
+      "twitterDescription": "Take our quiz and discover your personal Taste Profile. Using artificial intelligence and the expertise of our master distillers, we'll recommend a whiskey that's perfect for you.",
+      "twitterText": "My unique taste profile is [match_flavour]. Take the What's Your Whiskey quiz and find out which Classic malt, Bourbon or Blend best matches your unique taste!",
+      "ogType": "website",
+      "ogURL": "https://www.whatsyourwhisky.com",
+      "ogTitle": "Find Your Taste",
+      "ogDescription": "Take our quiz and discover your personal Taste Profile. Using artificial intelligence and the expertise of our master distillers, we'll recommend a whiskey that's perfect for you.",
+      "ogQuote": "My unique taste profile is [match_flavour]. Take the What's Your Whiskey quiz and find out which Classic malt, Bourbon or Blend best matches your unique taste!"
+    },
+    "flavour": [
+      [
+        {
+          "id": "sweet",
+          "_url": "/en-in/data/flavour-print-details-4/sweet",
+          "key": "sweet",
+          "value": "Sweet flavors typically fall into three areas; confectionery sweetness such as honey, chocolate and pie crust, caramelised sweetness such as toffee apples, golden syrup and fudge, and vanilla sweetness such as custard, marshmallows and vanilla ice cream."
+        },
+        {
+          "id": "fruity",
+          "_url": "/en-in/data/flavour-print-details-4/fruity",
+          "key": "fruity",
+          "value": "The perceptions of fruity flavors differ slightly around the world, but can often be split into four areas; tropical fruits such as mango and banana, orchard fruits such as apples and pears, citrus fruits such a grapefruit and lime, and dried fruits such as raisins and dates."
+        },
+        {
+          "id": "spicy",
+          "_url": "/en-in/data/flavour-print-details-4/spicy",
+          "key": "spicy",
+          "value": "Spicy flavors generally fall into two areas: sweet, aromatic warming spices such as cinnamon, cloves and nutmeg, and burning spices such as bird's eye chilis and jalapeño peppers."
+        },
+        {
+          "id": "smoky",
+          "_url": "/en-in/data/flavour-print-details-4/smoky",
+          "key": "smoky",
+          "value": "To some, smoky flavors all taste the same. To others, smoky flavors can be split into two different areas: fresh woody flavors, and more earthy flavors such as peat smoke, dark roast coffee and cigars."
+        }
+      ],
+      []
+    ]
+  },
+  "__N_SSG": true
+}

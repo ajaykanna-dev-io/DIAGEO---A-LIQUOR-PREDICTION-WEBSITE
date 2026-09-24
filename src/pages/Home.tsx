@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import Layout from '@/components/Layout'
@@ -145,7 +145,7 @@ function Philosophy() {
       >
         <SectionLabel className="mb-6 sm:mb-8">Luxury Through Restraint</SectionLabel>
         <p className="font-display text-2xl sm:text-4xl md:text-5xl text-ivory leading-snug text-balance">
-          Eight considered questions. One spirit that feels, unmistakably, like you.
+          <span className="golden-flash-text font-bold">13</span> considered questions. One spirit that feels, unmistakably, like you.
         </p>
       </motion.div>
 
@@ -281,28 +281,104 @@ function FeaturedSpirits() {
 /* ─────────── Closing CTA ─────────── */
 
 function ClosingCTA() {
+  const bottleImages = useMemo(() => {
+    return Array.from(
+      new Set(spirits.map((s) => s.image).filter((img): img is string => typeof img === 'string' && img.length > 0))
+    )
+  }, [])
+
   return (
-    <section className="mx-auto max-w-4xl px-4 sm:px-6 md:px-10 py-20 sm:py-32 lg:py-40 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.5 }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+    <section className="relative w-full overflow-hidden py-16 sm:py-20 md:py-24 flex flex-col items-center justify-center border-t border-gold/15 bg-obsidian">
+      {/* ── Background: 3D Rotational Bottle Carousel (Proper Size & Luxury Spacing) ── */}
+      <div
+        className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-25 select-none"
+        style={{
+          perspective: 1400,
+          maskImage:
+            'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.85) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0.85) 88%, transparent 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.85) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0.85) 88%, transparent 100%)',
+        }}
+        aria-hidden="true"
       >
-        <h2 className="font-display text-3xl sm:text-5xl md:text-6xl text-ivory text-balance mb-8 sm:mb-10">
-          Your spirit is waiting to be found.
-        </h2>
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        <div
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: 'translateZ(-640px) rotateX(2deg)',
+          }}
+          className="relative flex items-center justify-center"
+        >
+          <motion.div
+            animate={{ rotateY: [0, -360] }}
+            transition={{
+              duration: 52,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+            style={{
+              transformStyle: 'preserve-3d',
+              transformOrigin: 'center center',
+            }}
+            className="relative w-0 h-0 flex items-center justify-center"
+          >
+            {bottleImages.map((imgSrc, idx) => {
+              const angle = (360 / bottleImages.length) * idx
+              return (
+                <div
+                  key={`closing-rotational-bottle-${idx}`}
+                  style={{
+                    position: 'absolute',
+                    transformStyle: 'preserve-3d',
+                    transform: `rotateY(${angle}deg) translateZ(640px)`,
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                  }}
+                  className="flex items-center justify-center w-24 sm:w-28 md:w-32 h-60 sm:h-68 md:h-76 -ml-12 sm:-ml-14 md:-ml-16 -mt-30 sm:-mt-34 md:-mt-38"
+                >
+                  <img
+                    src={imgSrc}
+                    alt=""
+                    loading="lazy"
+                    className="max-h-full max-w-full object-contain filter drop-shadow-[0_15px_28px_rgba(0,0,0,0.95)]"
+                  />
+                </div>
+              )
+            })}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Subtle Atmospheric Amber Halo & Center Readability Shield ── */}
+      <div
+        className="absolute inset-0 pointer-events-none flex items-center justify-center"
+        aria-hidden="true"
       >
-        <PrimaryButton to="/discovery" variant="filled" arrow={false} flashy>
-          Begin the Experience →
-        </PrimaryButton>
-      </motion.div>
+        <div className="w-[450px] sm:w-[650px] h-[240px] sm:h-[300px] rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(198,161,91,0.07)_0%,_rgba(8,8,10,0.78)_55%,_transparent_80%)] blur-2xl" />
+      </div>
+
+      {/* ── Foreground Content ── */}
+      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 md:px-10 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <h2 className="font-display text-3xl sm:text-5xl md:text-6xl text-ivory text-balance mb-6 sm:mb-8 drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
+            Your spirit is waiting to be found.
+          </h2>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <PrimaryButton to="/discovery" variant="filled" arrow={false} flashy>
+            Begin the Experience →
+          </PrimaryButton>
+        </motion.div>
+      </div>
     </section>
   )
 }

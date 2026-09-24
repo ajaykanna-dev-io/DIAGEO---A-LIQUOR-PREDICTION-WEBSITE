@@ -662,6 +662,51 @@ class BarMusicEngine {
   }
 
   /**
+   * Resonant palate reward harmonic when confirming an answer in the tasting discovery
+   */
+  public playDiscoveryRewardHarmonic() {
+    try {
+      if (!this.ctx || this.ctx.state === 'suspended' || this.muted) return
+
+      const now = this.ctx.currentTime
+      const osc1 = this.ctx.createOscillator()
+      const osc2 = this.ctx.createOscillator()
+      const sub = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+
+      // Perfect fifth warm chime (A5 + E6)
+      osc1.type = 'sine'
+      osc1.frequency.setValueAtTime(880.0, now)
+      osc1.frequency.exponentialRampToValueAtTime(882.0, now + 1.0)
+
+      osc2.type = 'sine'
+      osc2.frequency.setValueAtTime(1320.0, now)
+      osc2.frequency.exponentialRampToValueAtTime(1318.5, now + 1.2)
+
+      // Warm cello sub-tone
+      sub.type = 'triangle'
+      sub.frequency.setValueAtTime(110.0, now)
+
+      gain.gain.setValueAtTime(0.0001, now)
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.04)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.3)
+
+      osc1.connect(gain)
+      osc2.connect(gain)
+      sub.connect(gain)
+      gain.connect(this.masterGain || this.ctx.destination)
+
+      osc1.start(now)
+      osc2.start(now)
+      sub.start(now)
+
+      osc1.stop(now + 1.4)
+      osc2.stop(now + 1.4)
+      sub.stop(now + 1.4)
+    } catch {}
+  }
+
+  /**
    * Warm cinematic threshold transition when walking to next chamber
    */
   public playChamberWalkTransition() {
