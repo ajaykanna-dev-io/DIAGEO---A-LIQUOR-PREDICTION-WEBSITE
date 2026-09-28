@@ -1,15 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import type { Spirit } from '@/types'
-import AmbientBarAudio from '@/components/AmbientBarAudio'
 import { IoClose } from 'react-icons/io5'
+import { spirits, getAlternativesWithMatch } from '@/data/spirits'
 
 interface RecommendationRevealProps {
   primaryMatch: Spirit
   secondaryMatches: Spirit[]
   matchScore: number
   onRestart: () => void
+  isRevealed?: boolean
 }
 
 /**
@@ -20,27 +21,277 @@ interface RecommendationRevealProps {
  * - Left: "YOUR MATCH", Brand & Name, Specs, Tasting Description, Pill Tags, and Match Score Badge
  * - Right: Frosted glass "FLAVOUR PROFILE" card with SPICE, OAK, FRUIT, SMOKE, SWEETNESS bars,
  *   "EXPLORE THIS EXPRESSION →" CTA, and "CELLAR SELECTION → | RECALIBRATE ↻"
- * - Top Header: "A U R E L | TASTE DISCOVERY" and "YOUR JOURNEY ─── 08 / 08" with audio toggle
- * - Bottom Bar: "01 ── • ── ‹ ARCHETYPE › ── • ── 08"
+ * - Archetype Selector: Interactive ‹ ARCHETYPE › buttons cycling through all spirits & synchronous data updates
+ * - Smooth Wheel/Scroll & Touch Gesture: Deliberately transitions through subsequent spirits on scroll down/up
  */
-type RevealPhase = 'phase1_synthesis' | 'phase2_archetype' | 'final_recommendation'
-
 export default function RecommendationReveal({
   primaryMatch,
   secondaryMatches,
   matchScore,
   onRestart,
+  isRevealed = true,
 }: RecommendationRevealProps) {
-  const [phase, setPhase] = useState<RevealPhase>('final_recommendation')
   const [showCellarModal, setShowCellarModal] = useState(false)
   const [mobileTab, setMobileTab] = useState<'match' | 'flavour'>('match')
 
+  // Construct complete ranked list of all spirits starting with optimal match
+  const allSpirits = useMemo(() => {
+    const scoredOthers = getAlternativesWithMatch(primaryMatch, spirits.length)
+    return [{ spirit: primaryMatch, match: matchScore }, ...scoredOthers]
+  }, [primaryMatch, matchScore])
+
+  const [activeSpiritIndex, setActiveSpiritIndex] = useState(0)
+  const [slideDirection, setSlideDirection] = useState<1 | -1>(1)
+
+  const [transitionDuration, setTransitionDuration] = useState<number>(0.55)
+
+  const activeEntry = allSpirits[activeSpiritIndex] || allSpirits[0]
+  const activeSpirit = activeEntry.spirit
+  const activeMatchScore = activeEntry.match
+
+  // Lock and gesture tracking refs to guarantee strictly ONE brand transition per scroll gesture
+  const isLockedRef = useRef(false)
+  const lockedUntilRef = useRef(0)
+  const lastWheelEventTimeRef = useRef(0)
+  const accumulatedDeltaRef = useRef(0)
+  const gestureStartTimeRef = useRef(0)
+  const wheelSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mouseWheelDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingWheelDeltaRef = useRef(0)
+
+  // Master spirit transition trigger with velocity duration & lock enforcement
+  const triggerTransition = useCallback(
+    (direction: 1 | -1, customDuration?: number) => {
+      if (isLockedRef.current) return
+      const duration = typeof customDuration === 'number' ? customDuration : 0.55
+      const now = performance.now()
+
+      isLockedRef.current = true
+      // In AnimatePresence mode="wait", the visual cycle is: exit duration + enter duration = duration * 2
+      // We lock for the full animation duration + safety buffer (at least 950ms) to ensure
+      // trackpad inertia and residual momentum never advance more than 1 brand.
+      const totalAnimationMs = Math.round(duration * 2 * 1000)
+      const minLockDurationMs = Math.max(totalAnimationMs + 180, 950)
+      lockedUntilRef.current = now + minLockDurationMs
+
+      setTransitionDuration(duration)
+      setSlideDirection(direction)
+      setActiveSpiritIndex((prev) =>
+        direction > 0
+          ? (prev + 1) % allSpirits.length
+          : (prev - 1 + allSpirits.length) % allSpirits.length
+      )
+
+      setTimeout(() => {
+        if (performance.now() - lastWheelEventTimeRef.current >= 300) {
+          isLockedRef.current = false
+        }
+      }, minLockDurationMs)
+    },
+    [allSpirits.length]
+  )
+
+  const handleNextSpirit = useCallback(
+    (customDuration?: number) => {
+      triggerTransition(1, customDuration)
+    },
+    [triggerTransition]
+  )
+
+  const handlePrevSpirit = useCallback(
+    (customDuration?: number) => {
+      triggerTransition(-1, customDuration)
+    },
+    [triggerTransition]
+  )
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (showCellarModal) return
+
+      const now = performance.now()
+      lastWheelEventTimeRef.current = now
+
+      // Reset wheel silence timer on every event
+      if (wheelSilenceTimerRef.current) {
+        clearTimeout(wheelSilenceTimerRef.current)
+      }
+
+      // 1. IF CURRENTLY LOCKED:
+      // Completely discard this event. We are either animating or absorbing residual inertia/momentum.
+      // Reset the silence timer so the lock is held until the trackpad/wheel has fully stopped for 350ms.
+      if (isLockedRef.current) {
+        accumulatedDeltaRef.current = 0
+        pendingWheelDeltaRef.current = 0
+        if (mouseWheelDebounceTimerRef.current) {
+          clearTimeout(mouseWheelDebounceTimerRef.current)
+          mouseWheelDebounceTimerRef.current = null
+        }
+
+        wheelSilenceTimerRef.current = setTimeout(() => {
+          const currentTime = performance.now()
+          if (
+            currentTime >= lockedUntilRef.current &&
+            currentTime - lastWheelEventTimeRef.current >= 300
+          ) {
+            isLockedRef.current = false
+            accumulatedDeltaRef.current = 0
+            gestureStartTimeRef.current = 0
+          } else {
+            const remaining = Math.max(80, lockedUntilRef.current - currentTime)
+            setTimeout(() => {
+              if (performance.now() - lastWheelEventTimeRef.current >= 280) {
+                isLockedRef.current = false
+                accumulatedDeltaRef.current = 0
+                gestureStartTimeRef.current = 0
+              }
+            }, remaining)
+          }
+        }, 350)
+        return
+      }
+
+      // 2. DISCRETE MOUSE WHEEL NOTCH vs CONTINUOUS TRACKPAD
+      const isLineMode = e.deltaMode === 1
+      const isLargeDiscreteStep = isLineMode || Math.abs(e.deltaY) >= 100
+
+      if (isLargeDiscreteStep) {
+        // Collect mouse wheel notches over a tiny 48ms buffer
+        pendingWheelDeltaRef.current += e.deltaY
+
+        if (!mouseWheelDebounceTimerRef.current) {
+          mouseWheelDebounceTimerRef.current = setTimeout(() => {
+            const delta = pendingWheelDeltaRef.current
+            pendingWheelDeltaRef.current = 0
+            mouseWheelDebounceTimerRef.current = null
+
+            if (isLockedRef.current || Math.abs(delta) < 40) return
+
+            const direction = delta > 0 ? 1 : -1
+            const absDelta = Math.abs(delta)
+
+            // 1 notch = slow deliberate wheel turn -> 1.05s
+            // 2 notches = medium wheel turn -> 0.60s
+            // 3+ notches = fast wheel spin -> 0.28s
+            let computedDuration = 1.05
+            if (absDelta >= 300) {
+              computedDuration = 0.28
+            } else if (absDelta >= 200) {
+              computedDuration = 0.60
+            }
+
+            triggerTransition(direction, computedDuration)
+          }, 48)
+        }
+        return
+      }
+
+      // 3. CONTINUOUS TRACKPAD PIXEL SCROLL:
+      if (accumulatedDeltaRef.current === 0) {
+        gestureStartTimeRef.current = now
+      }
+      accumulatedDeltaRef.current += e.deltaY
+
+      // Reset if tiny nudge under threshold stops
+      wheelSilenceTimerRef.current = setTimeout(() => {
+        accumulatedDeltaRef.current = 0
+        gestureStartTimeRef.current = 0
+      }, 220)
+
+      const TRACKPAD_THRESHOLD = 26
+
+      if (Math.abs(accumulatedDeltaRef.current) >= TRACKPAD_THRESHOLD) {
+        const elapsed = Math.max(16, now - gestureStartTimeRef.current)
+        const absDelta = Math.abs(accumulatedDeltaRef.current)
+        const direction = accumulatedDeltaRef.current > 0 ? 1 : -1
+        const velocity = absDelta / elapsed
+
+        accumulatedDeltaRef.current = 0
+        gestureStartTimeRef.current = 0
+
+        // Velocity mapping:
+        // Slow scroll (<= 0.16 px/ms): ~1.15s duration (existing screen slowly dissolves, next slowly shows)
+        // Fast scroll (>= 1.60 px/ms): ~0.26s duration (fast, crisp transition)
+        const clampedVelocity = Math.max(0.16, Math.min(1.60, velocity))
+        const normalized = (clampedVelocity - 0.16) / (1.60 - 0.16)
+        const computedDuration = Math.round((1.15 - normalized * (1.15 - 0.26)) * 100) / 100
+
+        triggerTransition(direction, computedDuration)
+      }
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+      if (wheelSilenceTimerRef.current) clearTimeout(wheelSilenceTimerRef.current)
+      if (mouseWheelDebounceTimerRef.current) clearTimeout(mouseWheelDebounceTimerRef.current)
+    }
+  }, [showCellarModal, triggerTransition])
+
+  // Touch Swipe Gesture for Mobile / Tablet with velocity-adaptive duration
+  const touchStartYRef = useRef<number | null>(null)
+  const touchStartTimeRef = useRef<number>(0)
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (showCellarModal) return
+      touchStartYRef.current = e.touches[0].clientY
+      touchStartTimeRef.current = performance.now()
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (showCellarModal || touchStartYRef.current === null) return
+      const touchEndY = e.changedTouches[0].clientY
+      const diffY = touchStartYRef.current - touchEndY
+      const timeTaken = Math.max(16, performance.now() - touchStartTimeRef.current)
+      touchStartYRef.current = null
+
+      if (isLockedRef.current) return
+
+      const TOUCH_THRESHOLD = 35
+
+      if (Math.abs(diffY) > TOUCH_THRESHOLD) {
+        const velocity = Math.abs(diffY) / timeTaken
+        const clampedVelocity = Math.max(0.18, Math.min(1.8, velocity))
+        const normalized = (clampedVelocity - 0.18) / (1.8 - 0.18)
+        const computedDuration = Math.round((1.15 - normalized * (1.15 - 0.28)) * 100) / 100
+
+        const direction = diffY > 0 ? 1 : -1
+        triggerTransition(direction, computedDuration)
+      }
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [showCellarModal, triggerTransition])
+
+  // Keyboard navigation (ArrowLeft/Right, ArrowUp/Down)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showCellarModal) return
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        triggerTransition(1, 0.55)
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        triggerTransition(-1, 0.55)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showCellarModal, triggerTransition])
+
   // Parse title into brand line & expression line to match "Johnnie Walker" / "Blonde"
   const { brandLine, expressionLine } = useMemo(() => {
-    if (primaryMatch.brand && primaryMatch.name) {
-      return { brandLine: primaryMatch.brand, expressionLine: primaryMatch.name }
+    if (activeSpirit.brand && activeSpirit.name) {
+      return { brandLine: activeSpirit.brand, expressionLine: activeSpirit.name }
     }
-    const parts = primaryMatch.fullName.split(' ')
+    const parts = activeSpirit.fullName.split(' ')
     if (parts.length >= 3) {
       return {
         brandLine: parts.slice(0, 2).join(' '),
@@ -50,20 +301,20 @@ export default function RecommendationReveal({
     if (parts.length === 2) {
       return { brandLine: parts[0], expressionLine: parts[1] }
     }
-    return { brandLine: primaryMatch.fullName, expressionLine: '' }
-  }, [primaryMatch])
+    return { brandLine: activeSpirit.fullName, expressionLine: '' }
+  }, [activeSpirit])
 
   // Clean, consistent specs line: "BLEND · SCOTLAND · 40%"
   const specsLine = useMemo(() => {
-    const category = (primaryMatch.category || 'Single Malt').toUpperCase()
-    const origin = (primaryMatch.origin || 'Scotland').split(',')[0].trim().toUpperCase()
-    const abv = primaryMatch.abv || '40%'
+    const category = (activeSpirit.category || 'Single Malt').toUpperCase()
+    const origin = (activeSpirit.origin || 'Scotland').split(',')[0].trim().toUpperCase()
+    const abv = activeSpirit.abv || '40%'
     return `${category}  ·  ${origin}  ·  ${abv}`
-  }, [primaryMatch])
+  }, [activeSpirit])
 
   // 5 Flavour dimensions matching the reference image: SPICE, OAK, FRUIT, SMOKE, SWEETNESS
   const flavourBars = useMemo(() => {
-    const prof = primaryMatch.profile || {
+    const prof = activeSpirit.profile || {
       complexity: 65,
       intensity: 60,
       smoothness: 85,
@@ -78,9 +329,9 @@ export default function RecommendationReveal({
       { label: 'SMOKE', val: Math.round(prof.smokiness) },
       { label: 'SWEETNESS', val: Math.round(prof.sweetness) },
     ]
-  }, [primaryMatch])
+  }, [activeSpirit])
 
-  const archetype = primaryMatch.archetype || 'THE EXPLORER'
+  const archetype = activeSpirit.archetype || 'THE ICON'
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col justify-between bg-[#070605] text-[#FAF7F2] select-none z-50">
@@ -100,12 +351,17 @@ export default function RecommendationReveal({
       {/* ── EDITORIAL TOP HEADER ── */}
       <header className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-12 pt-3 sm:pt-5 pb-1 sm:pb-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to="/"
-            className="font-serif tracking-[0.25em] text-base sm:text-xl text-[#FAF7F2] hover:text-[#E5C378] transition-colors whitespace-nowrap drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]"
+          <div
+            onClick={onRestart}
+            className="flex items-center gap-2.5 cursor-pointer group select-none"
+            title="No. 8 Reserve — Return to Start"
           >
-            DIAGEO
-          </Link>
+            <img
+              src="/images/logo-BJ7D25WF.webp"
+              alt="No. 8 Reserve"
+              className="h-8 sm:h-10 w-auto object-contain drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)] group-hover:scale-105 transition-all"
+            />
+          </div>
           <span className="h-3.5 w-px bg-[#C6A15B]/40" />
           <span className="font-mono text-[8px] sm:text-[10px] tracking-[0.28em] text-[#C6A15B] uppercase font-semibold whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
             TASTE DISCOVERY
@@ -113,194 +369,27 @@ export default function RecommendationReveal({
         </div>
 
         <div className="flex items-center gap-3 sm:gap-5">
-          {phase !== 'final_recommendation' ? (
-            <button
-              onClick={() => setPhase('final_recommendation')}
-              className="px-3 py-1 rounded-full border border-[#C6A15B]/60 bg-black/70 text-[#F5CE76] hover:text-white font-mono text-[9px] uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_12px_rgba(198,161,91,0.25)]"
-            >
-              Skip to Reveal →
-            </button>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 font-mono text-[8px] sm:text-[10px] tracking-[0.22em] text-stone/60 uppercase whitespace-nowrap">
-              <span>YOUR JOURNEY</span>
-              <span className="w-8 sm:w-12 h-px bg-white/20" />
-              <span className="text-[#FAF7F2] font-semibold">13 / 13</span>
-            </div>
-          )}
-
-          <AmbientBarAudio className="ml-2 sm:ml-4" />
+          <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 font-mono text-[8px] sm:text-[10px] tracking-[0.22em] text-stone/60 uppercase whitespace-nowrap">
+            <span>YOUR JOURNEY</span>
+            <span className="w-8 sm:w-12 h-px bg-white/20" />
+            <span className="text-[#FAF7F2] font-semibold">13 / 13</span>
+          </div>
         </div>
       </header>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* ── PHASE 1: SENSORY ANALYSIS (DISTILLATION SYNTHESIS) ── */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <AnimatePresence mode="wait">
-        {phase === 'phase1_synthesis' && (
-          <motion.div
-            key="phase1-container"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 max-w-3xl mx-auto my-auto min-h-0"
-          >
-            {/* Concentric Golden Orbital Rings */}
-            <div className="relative w-36 h-36 sm:w-48 sm:h-48 mb-6 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 rounded-full border border-[#C6A15B]/30 border-dashed"
-              />
-              <motion.div
-                animate={{ rotate: -360 }}
-                transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-3 rounded-full border border-[#F5CE76]/40"
-              />
-              <motion.div
-                animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#1a140b] via-[#332512] to-[#120e08] border border-[#C6A15B] flex items-center justify-center shadow-[0_0_40px_rgba(198,161,91,0.45)]"
-              >
-                <svg viewBox="0 0 24 24" className="w-8 h-8 text-[#F5CE76]" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
-                </svg>
-              </motion.div>
-            </div>
-
-            {/* Stage Title */}
-            <span className="font-mono text-[9px] sm:text-[11px] tracking-[0.38em] uppercase text-[#C6A15B] font-bold mb-2 block">
-              PHASE 01 — SENSORY SYNTHESIS
-            </span>
-            <h2 className="font-serif text-2xl sm:text-4xl text-white font-normal tracking-tight mb-3">
-              Synthesizing Palate Coordinates
-            </h2>
-            <p className="font-sans text-xs sm:text-sm text-stone/80 max-w-md mx-auto leading-relaxed mb-6 font-light">
-              Calibrating oak maturity, smoke viscosity, and cask resonance against master blender profiles...
-            </p>
-
-            {/* 4 Animated Metric Indicators */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-lg mb-6">
-              {[
-                { label: 'VISCOSITY', val: '94%' },
-                { label: 'CASK BALANCE', val: '88%' },
-                { label: 'ESTERS', val: '91%' },
-                { label: 'HARMONY', val: `${Math.round(matchScore)}%` },
-              ].map((m, i) => (
-                <motion.div
-                  key={m.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 * i + 0.2 }}
-                  className="p-2.5 rounded-xl bg-black/60 border border-[#C6A15B]/30 backdrop-blur-md"
-                >
-                  <span className="font-mono text-[8px] sm:text-[9px] tracking-widest text-stone/50 block">
-                    {m.label}
-                  </span>
-                  <span className="font-serif text-base sm:text-lg text-[#F5CE76] font-light">
-                    {m.val}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Auto progress bar */}
-            <div className="w-48 sm:w-64 h-1 bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 2.8, ease: 'easeInOut' }}
-                className="h-full bg-gradient-to-r from-[#C6A15B] via-[#F5CE76] to-white shadow-[0_0_10px_#F5CE76]"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* ── PHASE 2: BESPOKE ARCHETYPE IDENTIFIED ── */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {phase === 'phase2_archetype' && (
-          <motion.div
-            key="phase2-container"
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 max-w-3xl mx-auto my-auto min-h-0"
-          >
-            <span className="font-mono text-[9px] sm:text-[11px] tracking-[0.38em] uppercase text-[#C6A15B] font-bold mb-3 block">
-              PHASE 02 — ARCHETYPE IDENTIFIED
-            </span>
-
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.7 }}
-              className="mb-3 flex items-center justify-center gap-2"
-            >
-              <span className="w-12 sm:w-16 h-px bg-gradient-to-r from-transparent to-[#C6A15B]" />
-              <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.3em] uppercase text-stone/60 font-semibold">
-                YOUR TASTE PROFILE ARCHETYPE
-              </span>
-              <span className="w-12 sm:w-16 h-px bg-gradient-to-l from-transparent to-[#C6A15B]" />
-            </motion.div>
-
-            {/* Unveiled Archetype Title */}
-            <motion.h1
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.7 }}
-              className="font-serif text-3xl sm:text-5xl lg:text-6xl text-[#FAF7F2] font-normal tracking-tight mb-4 drop-shadow-[0_2px_16px_rgba(0,0,0,0.95)]"
-            >
-              ‹ {archetype} ›
-            </motion.h1>
-
-            {/* Match Affinity Badge */}
-            <motion.div
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.45, duration: 0.6 }}
-              className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-[#C6A15B]/60 bg-black/70 backdrop-blur-xl shadow-[0_0_25px_rgba(198,161,91,0.35)] mb-6"
-            >
-              <div className="w-7 h-7 rounded-full bg-[#C6A15B]/20 border border-[#C6A15B] flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#F5CE76]" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
-                </svg>
-              </div>
-              <span className="font-serif text-xl sm:text-2xl text-white font-light">
-                {Math.round(matchScore)}%
-              </span>
-              <span className="font-mono text-[9px] tracking-[0.25em] text-[#F5CE76] uppercase font-bold">
-                TASTE AFFINITY MATCH
-              </span>
-            </motion.div>
-
-            <p className="font-sans text-xs sm:text-sm text-stone/80 max-w-md mx-auto leading-relaxed font-light mb-6">
-              Distilling your bespoke expression from the world&apos;s greatest single malts and blended whiskies...
-            </p>
-
-            {/* Transition trigger button */}
-            <button
-              onClick={() => setPhase('final_recommendation')}
-              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#C6A15B] to-[#E5C378] text-black font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-bold shadow-[0_0_20px_rgba(198,161,91,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              Reveal Matched Spirit →
-            </button>
-          </motion.div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* ── FINAL RECOMMENDATION PAGE (PENTHOUSE ALTAR WITH CARDS) ── */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {phase === 'final_recommendation' && (
-          <motion.div
-            key="final-recommendation-container"
-            initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 flex-1 flex flex-col justify-between w-full min-h-0"
-          >
-            {/* ── DESKTOP 3-COLUMN REVEAL GRID (lg:grid) ── */}
+      {/* ── FINAL RECOMMENDATION PAGE (PENTHOUSE ALTAR WITH CARDS) ── */}
+      <motion.div
+        key="final-recommendation-container"
+        initial={{ opacity: 0, scale: 0.985, filter: 'blur(8px)' }}
+        animate={{
+          opacity: isRevealed ? 1 : 0,
+          scale: isRevealed ? 1 : 0.985,
+          filter: isRevealed ? 'blur(0px)' : 'blur(8px)',
+        }}
+        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 flex-1 flex flex-col justify-between w-full min-h-0"
+      >
+        {/* ── DESKTOP 3-COLUMN REVEAL GRID (lg:grid) ── */}
             <div className="hidden lg:grid grid-cols-12 gap-5 lg:gap-8 items-center w-full max-w-7xl mx-auto px-6 sm:px-12 flex-1 min-h-0">
               {/* LEFT COLUMN: Dossier Card */}
               <motion.div
@@ -312,71 +401,84 @@ export default function RecommendationReveal({
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#C6A15B]/10 rounded-full blur-2xl pointer-events-none" />
 
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
-                    YOUR MATCH
-                  </span>
-                  <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] text-stone/50 uppercase">
-                    {specsLine}
-                  </span>
-                </div>
-
-                <h1 className="font-serif text-2xl sm:text-3xl lg:text-[32px] text-[#FAF7F2] font-normal leading-[1.12] tracking-tight">
-                  <span>{brandLine}</span>
-                  {expressionLine && (
-                    <>
-                      <br />
-                      <span className="text-[#E5C378]">{expressionLine}</span>
-                    </>
-                  )}
-                </h1>
-
-                <p className="text-stone/80 text-xs sm:text-[13px] font-sans font-light leading-relaxed line-clamp-3">
-                  {primaryMatch.description}
-                </p>
-
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {primaryMatch.descriptors.slice(0, 3).map((desc) => (
-                    <span
-                      key={desc}
-                      className="px-3 py-1 rounded-full border border-white/15 bg-white/5 text-[10px] sm:text-[11px] font-mono text-stone/90 backdrop-blur-md shadow-xs"
-                    >
-                      {desc}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
-                  <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#C6A15B]/60 bg-black/60 flex items-center justify-center p-1.5 shadow-[0_0_12px_rgba(198,161,91,0.25)]">
-                      <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#E5C378]" fill="none" stroke="currentColor" strokeWidth="1.6">
-                        <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
-                      </svg>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <span className="font-serif text-xl sm:text-2xl text-[#FAF7F2] font-light leading-none">
-                        {Math.round(matchScore)}%
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeSpirit.id}
+                    initial={{ opacity: 0, y: slideDirection > 0 ? 18 : -18, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: slideDirection > 0 ? -18 : 18, filter: 'blur(5px)' }}
+                    transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex flex-col justify-between h-full space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
+                        {activeSpiritIndex === 0 ? 'YOUR MATCH' : 'CELLAR ARCHETYPE'}
                       </span>
-                      <span className="font-mono text-[8px] tracking-[0.28em] text-stone/50 uppercase mt-0.5">
-                        TASTE AFFINITY
+                      <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] text-stone/50 uppercase">
+                        {specsLine}
                       </span>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-medium">
-                      OPTIMAL MATCH
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] shadow-[0_0_6px_#C6A15B]" />
-                  </div>
-                </div>
+                    <div className="space-y-3">
+                      <h1 className="font-serif text-2xl sm:text-3xl lg:text-[32px] text-[#FAF7F2] font-normal leading-[1.12] tracking-tight">
+                        <span>{brandLine}</span>
+                        {expressionLine && (
+                          <>
+                            <br />
+                            <span className="text-[#E5C378]">{expressionLine}</span>
+                          </>
+                        )}
+                      </h1>
+
+                      <p className="text-stone/80 text-xs sm:text-[13px] font-sans font-light leading-relaxed line-clamp-3">
+                        {activeSpirit.description}
+                      </p>
+
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {activeSpirit.descriptors.slice(0, 3).map((desc) => (
+                          <span
+                            key={desc}
+                            className="px-3 py-1 rounded-full border border-white/15 bg-white/5 text-[10px] sm:text-[11px] font-mono text-stone/90 backdrop-blur-md shadow-xs"
+                          >
+                            {desc}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#C6A15B]/60 bg-black/60 flex items-center justify-center p-1.5 shadow-[0_0_12px_rgba(198,161,91,0.25)]">
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#E5C378]" fill="none" stroke="currentColor" strokeWidth="1.6">
+                            <path d="M8 21h8m-4-7v7m0-7a7 7 0 007-7V3H5v4a7 7 0 007 7z" />
+                          </svg>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <span className="font-serif text-xl sm:text-2xl text-[#FAF7F2] font-light leading-none">
+                            {Math.round(activeMatchScore)}%
+                          </span>
+                          <span className="font-mono text-[8px] tracking-[0.28em] text-stone/50 uppercase mt-0.5">
+                            TASTE AFFINITY
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-medium">
+                          {activeSpiritIndex === 0 ? 'OPTIMAL MATCH' : 'SPECTRUM MATCH'}
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] shadow-[0_0_6px_#C6A15B]" />
+                      </div>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
 
-              {/* CENTER COLUMN: Bottle on Altar Pedestal */}
+              {/* CENTER COLUMN: Bottle on Altar Pedestal with Interactive Archetype Capsule */}
               <div className="col-span-4 relative flex flex-col items-center justify-center self-stretch z-10 min-h-0">
-                {/* Archetype Badge Directly on Top of the Bottle */}
+                {/* Archetype Badge Directly on Top of the Bottle with Interactive ‹ › Buttons */}
                 <motion.div
                   initial={{ opacity: 0, y: -16, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -386,47 +488,112 @@ export default function RecommendationReveal({
                   <span className="text-[8px] sm:text-[9px] font-mono tracking-[0.38em] text-[#C6A15B]/75 uppercase mb-1">
                     TASTE ARCHETYPE
                   </span>
-                  <div className="flex items-center gap-2.5 px-4 sm:px-5 py-1.5 rounded-full border border-[#C6A15B]/60 bg-gradient-to-r from-black/85 via-[#18140e]/95 to-black/85 backdrop-blur-md shadow-[0_4px_24px_rgba(198,161,91,0.35),0_0_12px_rgba(198,161,91,0.2)]">
-                    <span className="text-[#C6A15B] text-xs font-serif">‹</span>
-                    <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.34em] text-[#FAF7F2] uppercase font-semibold">
-                      {archetype}
-                    </span>
-                    <span className="text-[#C6A15B] text-xs font-serif">›</span>
+                  <div className="flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-1 rounded-full border border-[#C6A15B]/70 bg-gradient-to-r from-black/90 via-[#18140e]/95 to-black/90 backdrop-blur-md shadow-[0_4px_24px_rgba(198,161,91,0.35),0_0_12px_rgba(198,161,91,0.2)]">
+                    <button
+                      type="button"
+                      onClick={() => handlePrevSpirit(0.55)}
+                      className="w-6 h-6 p-2 mr-2 rounded-full flex items-center justify-center text-[#C6A15B] text-[#FFF8DB] bg-[#C6A15B]/25 active:scale-90 transition-all cursor-pointer select-none font-serif text-sm"
+                      title="Previous archetype (or scroll up)"
+                      aria-label="Previous archetype"
+                    >
+                      ‹
+                    </button>
+                    <div className="min-w-[120px] sm:min-w-[150px] text-center overflow-hidden px-1">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={activeSpirit.id}
+                          initial={{ opacity: 0, y: slideDirection > 0 ? 8 : -8, filter: 'blur(3px)' }}
+                          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, y: slideDirection > 0 ? -8 : 8, filter: 'blur(3px)' }}
+                          transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                          className="font-mono text-[10px] sm:text-[11px] tracking-[0.34em] text-[#FAF7F2] uppercase font-bold block"
+                        >
+                          {archetype}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleNextSpirit(0.55)}
+                      className="w-6 h-6 p-2 mr-2 rounded-full flex items-center justify-center text-[#C6A15B] text-[#FFF8DB] bg-[#C6A15B]/25 active:scale-90 transition-all cursor-pointer select-none font-serif text-sm"
+                      title="Next archetype (or scroll down)"
+                      aria-label="Next archetype"
+                    >
+                      ›
+                    </button>
                   </div>
                 </motion.div>
 
                 <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
+                  initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(6px)' }}
+                  animate={{
+                    opacity: isRevealed ? 1 : 0,
+                    y: isRevealed ? 0 : 20,
+                    scale: isRevealed ? 1 : 0.96,
+                    filter: isRevealed ? 'blur(0px)' : 'blur(6px)',
+                  }}
+                  transition={{ duration: 0.9, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
                   className="relative flex flex-col items-center justify-center flex-1 min-h-0"
                 >
                   {/* Golden altar glow beneath bottle */}
                   <div className="absolute bottom-0 w-52 sm:w-64 h-14 rounded-full bg-[#FFD54F]/30 blur-3xl pointer-events-none" />
                   <div className="absolute bottom-2 w-36 sm:w-48 h-6 rounded-full bg-[#C6A15B]/40 blur-xl pointer-events-none" />
 
-                  <motion.div
-                    animate={{ y: [0, -6, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                    className="relative h-[270px] sm:h-[310px] md:h-[340px] lg:h-[365px] xl:h-[385px] flex items-center justify-center"
-                  >
-                    <img
-                      src={primaryMatch.image}
-                      alt={primaryMatch.fullName}
-                      className="max-h-full max-w-full object-contain filter drop-shadow-[0_22px_40px_rgba(0,0,0,0.95)] drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] select-none"
-                    />
-                  </motion.div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSpirit.id}
+                      initial={{
+                        opacity: 0,
+                        y: slideDirection > 0 ? 30 : -30,
+                        scale: 0.94,
+                        filter: 'blur(6px)',
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        filter: 'blur(0px)',
+                      }}
+                      exit={{
+                        opacity: 0,
+                        y: slideDirection > 0 ? -30 : 30,
+                        scale: 0.94,
+                        filter: 'blur(6px)',
+                      }}
+                      transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                      className="relative h-[270px] sm:h-[310px] md:h-[340px] lg:h-[365px] xl:h-[385px] flex items-center justify-center"
+                    >
+                      <motion.div
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="relative h-full flex items-center justify-center"
+                      >
+                        <img
+                          src={activeSpirit.image}
+                          alt={activeSpirit.fullName}
+                          className="max-h-full max-w-full object-contain filter drop-shadow-[0_22px_40px_rgba(0,0,0,0.95)] drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] select-none"
+                        />
+                      </motion.div>
+                    </motion.div>
+                  </AnimatePresence>
 
-                  <div
-                    className="relative w-36 sm:w-44 h-7 overflow-hidden opacity-20 blur-[1.5px] pointer-events-none -mt-2"
-                    style={{ transform: 'scaleY(-1)' }}
-                  >
-                    <img
-                      src={primaryMatch.image}
-                      alt=""
-                      className="max-h-full max-w-full object-contain filter brightness-40"
-                    />
-                  </div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`reflection-${activeSpirit.id}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.2 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: transitionDuration * 0.7 }}
+                      className="relative w-36 sm:w-44 h-7 overflow-hidden blur-[1.5px] pointer-events-none -mt-2"
+                      style={{ transform: 'scaleY(-1)' }}
+                    >
+                      <img
+                        src={activeSpirit.image}
+                        alt=""
+                        className="max-h-full max-w-full object-contain filter brightness-40"
+                      />
+                    </motion.div>
+                  </AnimatePresence>
                 </motion.div>
               </div>
 
@@ -440,42 +607,58 @@ export default function RecommendationReveal({
               >
                 <div className="absolute top-0 left-0 w-32 h-32 bg-[#C6A15B]/10 rounded-full blur-2xl pointer-events-none" />
 
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] sm:text-[10px] font-mono tracking-[0.32em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
-                    FLAVOUR PROFILE
-                  </span>
-                  <span className="font-mono text-[9px] tracking-widest text-stone/50 uppercase">
-                    5 DIMENSIONS
-                  </span>
-                </div>
-
-                <div className="space-y-2 sm:space-y-2.5">
-                  {flavourBars.map((fb, idx) => (
-                    <div key={fb.label} className="space-y-0.5 sm:space-y-1">
-                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono tracking-wider uppercase">
-                        <span className="text-stone/75">{fb.label}</span>
-                        <span className="text-[#FAF7F2] font-medium">{fb.val}%</span>
-                      </div>
-                      <div className="relative h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${fb.val}%` }}
-                          transition={{ duration: 1.1, delay: 0.08 * idx, ease: 'easeOut' }}
-                          className="h-full bg-gradient-to-r from-[#9e7d3b] via-[#E5C378] to-[#FFF8DB] rounded-full relative shadow-[0_0_8px_rgba(229,195,120,0.6)]"
-                        />
-                      </div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeSpirit.id}
+                    initial={{ opacity: 0, y: slideDirection > 0 ? 18 : -18, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: slideDirection > 0 ? -18 : 18, filter: 'blur(5px)' }}
+                    transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] sm:text-[10px] font-mono tracking-[0.32em] uppercase text-[#C6A15B] font-semibold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />
+                        FLAVOUR PROFILE
+                      </span>
+                      <span className="font-mono text-[9px] tracking-widest text-stone/50 uppercase">
+                        5 DIMENSIONS
+                      </span>
                     </div>
-                  ))}
-                </div>
 
-                <Link
-                  to={`/spirit/${primaryMatch.id}`}
-                  className="w-full mt-1.5 py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 hover:border-[#F5CE76] text-[#FAF7F2] font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium flex items-center justify-center gap-2 transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.6)] hover:shadow-[0_0_22px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-                >
-                  <span>EXPLORE THIS EXPRESSION</span>
-                  <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-                </Link>
+                    <div className="space-y-2 sm:space-y-2.5">
+                      {flavourBars.map((fb, idx) => (
+                        <div key={fb.label} className="space-y-0.5 sm:space-y-1">
+                          <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono tracking-wider uppercase">
+                            <span className="text-stone/75">{fb.label}</span>
+                            <span className="text-[#FAF7F2] font-medium">{fb.val}%</span>
+                          </div>
+                          <div className="relative h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                            <motion.div
+                              key={`${activeSpirit.id}-${fb.label}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${fb.val}%` }}
+                              transition={{
+                                duration: transitionDuration * 0.85,
+                                delay: (transitionDuration * 0.05) * idx,
+                                ease: 'easeOut',
+                              }}
+                              className="h-full bg-gradient-to-r from-[#9e7d3b] via-[#E5C378] to-[#FFF8DB] rounded-full relative shadow-[0_0_8px_rgba(229,195,120,0.6)]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Link
+                      to={`/spirit/${activeSpirit.id}`}
+                      className="w-full mt-1.5 py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 hover:border-[#F5CE76] text-[#FAF7F2] font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium flex items-center justify-center gap-2 transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.6)] hover:shadow-[0_0_22px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <span>EXPLORE THIS EXPRESSION</span>
+                      <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                    </Link>
+                  </motion.div>
+                </AnimatePresence>
 
                 {/* ── PROMINENT LUXURY ACTION BUTTONS: CELLAR SELECTION & RECALIBRATE ── */}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#C6A15B]/25 mt-0.5">
@@ -494,7 +677,7 @@ export default function RecommendationReveal({
                     className="group relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] via-[#14120f] to-[#0c0a08] hover:from-[#2a2219] hover:via-[#1c1813] hover:to-[#120f0c] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.18em] font-semibold transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_0_20px_rgba(198,161,91,0.35)] cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
-                    <span>RECALIBRATE</span>
+                    <span>RE-DISCOVER</span>
                   </button>
                 </div>
               </motion.div>
@@ -524,7 +707,7 @@ export default function RecommendationReveal({
 
               {/* Mobile Center Bottle on Altar */}
               <div className="relative flex-1 flex flex-col items-center justify-center w-full min-h-0 py-1">
-                {/* Mobile Archetype Badge Directly on Top of Bottle */}
+                {/* Mobile Archetype Badge Directly on Top of Bottle with Interactive ‹ › Buttons */}
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -534,27 +717,65 @@ export default function RecommendationReveal({
                   <span className="text-[8px] font-mono tracking-[0.32em] text-[#C6A15B]/80 uppercase mb-0.5">
                     TASTE ARCHETYPE
                   </span>
-                  <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C6A15B]/60 bg-gradient-to-r from-black/90 via-[#1e1710] to-black/90 backdrop-blur-md shadow-[0_4px_18px_rgba(198,161,91,0.35)]">
-                    <span className="text-[#C6A15B] text-xs font-serif">‹</span>
-                    <span className="font-mono text-[10px] tracking-[0.32em] text-[#FAF7F2] uppercase font-semibold">
-                      {archetype}
-                    </span>
-                    <span className="text-[#C6A15B] text-xs font-serif">›</span>
+                  <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-full border border-[#C6A15B]/70 bg-gradient-to-r from-black/90 via-[#1e1710] to-black/90 backdrop-blur-md shadow-[0_4px_18px_rgba(198,161,91,0.35)]">
+                    <button
+                      type="button"
+                      onClick={() => handlePrevSpirit(0.55)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[#C6A15B] hover:text-[#FFF8DB] hover:bg-[#C6A15B]/25 active:scale-90 transition-all cursor-pointer select-none font-serif text-sm"
+                      title="Previous archetype"
+                      aria-label="Previous archetype"
+                    >
+                      ‹
+                    </button>
+                    <div className="min-w-[110px] text-center overflow-hidden px-1">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={activeSpirit.id}
+                          initial={{ opacity: 0, y: slideDirection > 0 ? 6 : -6, filter: 'blur(3px)' }}
+                          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, y: slideDirection > 0 ? -6 : 6, filter: 'blur(3px)' }}
+                          transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                          className="font-mono text-[10px] tracking-[0.32em] text-[#FAF7F2] uppercase font-bold block"
+                        >
+                          {archetype}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleNextSpirit(0.55)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[#C6A15B] hover:text-[#FFF8DB] hover:bg-[#C6A15B]/25 active:scale-90 transition-all cursor-pointer select-none font-serif text-sm"
+                      title="Next archetype"
+                      aria-label="Next archetype"
+                    >
+                      ›
+                    </button>
                   </div>
                 </motion.div>
 
                 <div className="absolute bottom-2 w-52 h-10 rounded-full bg-[#FFD54F]/30 blur-xl pointer-events-none" />
-                <motion.div
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                  className="relative h-[225px] sm:h-[260px] flex items-center justify-center"
-                >
-                  <img
-                    src={primaryMatch.image}
-                    alt={primaryMatch.fullName}
-                    className="max-h-full max-w-full object-contain filter drop-shadow-[0_24px_45px_rgba(0,0,0,0.98)] select-none"
-                  />
-                </motion.div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeSpirit.id}
+                    initial={{ opacity: 0, y: slideDirection > 0 ? 20 : -20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: slideDirection > 0 ? -20 : 20, scale: 0.95 }}
+                    transition={{ duration: transitionDuration }}
+                    className="relative h-[225px] sm:h-[260px] flex items-center justify-center"
+                  >
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                      className="relative h-full flex items-center justify-center"
+                    >
+                      <img
+                        src={activeSpirit.image}
+                        alt={activeSpirit.fullName}
+                        className="max-h-full max-w-full object-contain filter drop-shadow-[0_24px_45px_rgba(0,0,0,0.98)] select-none"
+                      />
+                    </motion.div>
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
               {/* Mobile Tab Pill Switcher */}
@@ -568,7 +789,7 @@ export default function RecommendationReveal({
                       : 'text-stone/60 hover:text-white'
                   }`}
                 >
-                  ✦ YOUR MATCH
+                  ✦ {activeSpiritIndex === 0 ? 'YOUR MATCH' : 'EXPRESSION'}
                 </button>
                 <button
                   type="button"
@@ -588,16 +809,16 @@ export default function RecommendationReveal({
                 <AnimatePresence mode="wait">
                   {mobileTab === 'match' ? (
                     <motion.div
-                      key="mob-match-card"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.25 }}
+                      key={`mob-match-${activeSpirit.id}`}
+                      initial={{ opacity: 0, y: slideDirection > 0 ? 12 : -12, filter: 'blur(3px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: slideDirection > 0 ? -12 : 12, filter: 'blur(3px)' }}
+                      transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
                       className="rounded-xl p-3.5 bg-[#0c0a08]/85 backdrop-blur-2xl border border-[#C6A15B]/35 shadow-xl space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-[8px] sm:text-[9px] tracking-[0.25em] text-[#C6A15B] uppercase font-bold">
-                          YOUR MATCH
+                          {activeSpiritIndex === 0 ? 'YOUR MATCH' : 'CELLAR ARCHETYPE'}
                         </span>
                         <span className="font-mono text-[8px] tracking-wider text-stone/50 uppercase">
                           {specsLine}
@@ -605,23 +826,25 @@ export default function RecommendationReveal({
                       </div>
 
                       <h2 className="font-serif text-lg text-white font-medium truncate">
-                        {primaryMatch.fullName}
+                        {activeSpirit.fullName}
                       </h2>
 
                       <p className="text-stone/75 text-[11px] font-light leading-snug line-clamp-2">
-                        {primaryMatch.description}
+                        {activeSpirit.description}
                       </p>
 
                       <div className="flex items-center justify-between pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2">
                           <span className="font-serif text-lg text-[#F5CE76]">
-                            {Math.round(matchScore)}%
+                            {Math.round(activeMatchScore)}%
                           </span>
-                          <span className="font-mono text-[8px] text-stone/50 tracking-wider">MATCH</span>
+                          <span className="font-mono text-[8px] text-stone/50 tracking-wider">
+                            {activeSpiritIndex === 0 ? 'OPTIMAL' : 'MATCH'}
+                          </span>
                         </div>
 
                         <div className="flex gap-1">
-                          {primaryMatch.descriptors.slice(0, 2).map((d) => (
+                          {activeSpirit.descriptors.slice(0, 2).map((d) => (
                             <span key={d} className="px-2 py-0.5 rounded text-[9px] font-mono bg-white/5 border border-white/10 text-stone/80">
                               {d}
                             </span>
@@ -631,7 +854,7 @@ export default function RecommendationReveal({
 
                       <div className="flex flex-col gap-2 pt-1.5 border-t border-white/10">
                         <Link
-                          to={`/spirit/${primaryMatch.id}`}
+                          to={`/spirit/${activeSpirit.id}`}
                           className="w-full py-2.5 text-center rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 text-[#FAF7F2] font-mono text-[10px] uppercase font-semibold tracking-[0.22em] shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
                           <span>EXPLORE THIS EXPRESSION</span>
@@ -653,18 +876,18 @@ export default function RecommendationReveal({
                             className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
                           >
                             <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
-                            <span>RECALIBRATE</span>
+                            <span>RE-DISCOVER</span>
                           </button>
                         </div>
                       </div>
                     </motion.div>
                   ) : (
                     <motion.div
-                      key="mob-flavour-card"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.25 }}
+                      key={`mob-flavour-${activeSpirit.id}`}
+                      initial={{ opacity: 0, y: slideDirection > 0 ? 12 : -12, filter: 'blur(3px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: slideDirection > 0 ? -12 : 12, filter: 'blur(3px)' }}
+                      transition={{ duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
                       className="rounded-xl p-3 bg-[#0c0a08]/85 backdrop-blur-2xl border border-[#C6A15B]/35 shadow-xl space-y-2"
                     >
                       <div className="flex items-center justify-between">
@@ -691,7 +914,7 @@ export default function RecommendationReveal({
 
                       <div className="flex flex-col gap-2 pt-1.5 border-t border-white/10">
                         <Link
-                          to={`/spirit/${primaryMatch.id}`}
+                          to={`/spirit/${activeSpirit.id}`}
                           className="w-full py-2.5 text-center rounded-lg bg-gradient-to-r from-[#1b1712] via-[#2a2215] to-[#1b1712] hover:from-[#352a19] hover:to-[#2a2215] border border-[#C6A15B]/70 text-[#FAF7F2] font-mono text-[10px] uppercase font-semibold tracking-[0.22em] shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
                           <span>EXPLORE THIS EXPRESSION</span>
@@ -713,7 +936,7 @@ export default function RecommendationReveal({
                             className="group flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border border-[#C6A15B]/70 hover:border-[#F5CE76] bg-gradient-to-b from-[#1c1813] to-[#0c0a08] text-[#E5C378] hover:text-[#FFF8DB] font-mono text-[9px] uppercase tracking-wider font-semibold shadow-md transition-all cursor-pointer"
                           >
                             <span className="text-[#F5CE76] text-xs transition-transform duration-500 group-hover:rotate-180">↻</span>
-                            <span>RECALIBRATE</span>
+                            <span>RE-DISCOVER</span>
                           </button>
                         </div>
                       </div>
@@ -723,24 +946,48 @@ export default function RecommendationReveal({
               </div>
             </div>
 
-            {/* ── BOTTOM NAVBAR: DISCOVERY COMPLETE ── */}
-            <motion.footer
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="relative z-20 w-full max-w-5xl mx-auto px-4 sm:px-10 pb-4 sm:pb-6 pt-1 flex items-center justify-center shrink-0 mt-auto pointer-events-auto"
-            >
-              <div className="flex items-center gap-2.5 px-5 sm:px-6 py-1.5 sm:py-2 rounded-full border border-[#C6A15B]/40 bg-black/80 backdrop-blur-md shadow-[0_2px_14px_rgba(198,161,91,0.22)] shrink-0">
-                <span className="w-2 h-2 rounded-full bg-[#C6A15B] animate-pulse shadow-[0_0_8px_#C6A15B]" />
-                <span className="text-[#FAF7F2] font-mono text-[9px] sm:text-[11px] tracking-[0.32em] uppercase font-semibold">
-                  DISCOVERY COMPLETE
-                </span>
-                <span className="w-2 h-2 rounded-full bg-[#C6A15B] animate-pulse shadow-[0_0_8px_#C6A15B]" />
-              </div>
-            </motion.footer>
+            {/* ── ANIMATED BOTTOM ARROW (MOVE DOWN ANIMATION, NO WORDINGS) ── */}
+            <div className="relative z-30 w-full flex justify-center pb-2 sm:pb-3 shrink-0 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => handleNextSpirit(0.55)}
+                className="group relative p-2 rounded-full cursor-pointer flex items-center justify-center transition-all duration-300 focus:outline-none"
+                aria-label="Next expression"
+              >
+                <motion.div
+                  animate={{
+                    y: [0, 8, 0],
+                  }}
+                  transition={{
+                    duration: 1.6,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                  className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#C6A15B]/50 bg-black/60 group-hover:bg-[#C6A15B]/20 group-hover:border-[#F5CE76] shadow-[0_0_16px_rgba(198,161,91,0.25)] group-hover:shadow-[0_0_24px_rgba(198,161,91,0.55)] transition-all duration-300"
+                >
+                  <motion.svg
+                    animate={{
+                      y: [0, 3, 0],
+                    }}
+                    transition={{
+                      duration: 1.6,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    className="w-4 h-4 text-[#E5C378] group-hover:text-[#FFF8DB] transition-colors"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M19 9l-7 7-7-7" />
+                  </motion.svg>
+                </motion.div>
+              </button>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
 
 
 

@@ -1,4 +1,4 @@
-# DIAGEO — Spirit Discovery (Frontend Prototype)
+# no8reserve — Spirit Discovery (Frontend Prototype)
 
 An ultra-premium, frontend-only prototype that guides a visitor through an
 eight-question taste discovery journey and reveals the spirit that matches

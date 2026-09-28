@@ -18,7 +18,7 @@ body {
 }
 
 body {
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: 'Poppins', 'Manrope', 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -98,6 +98,60 @@ button:focus-visible,
 .nav-link-sweep:hover::after {
   width: 100%;
 }
+
+/* ─── Golden border trace animation for the flavour plaque ─── */
+@keyframes golden-trace {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.golden-border-trace {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.golden-border-trace::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(198, 161, 91, 0.15) 0%,
+    rgba(198, 161, 91, 0.5) 25%,
+    rgba(212, 188, 116, 0.6) 50%,
+    rgba(198, 161, 91, 0.5) 75%,
+    rgba(198, 161, 91, 0.15) 100%
+  );
+  background-size: 300% 300%;
+  animation: golden-trace 6s ease infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Alembic Meniscus Sweep & Gold Glow Utilities ─── */
+@keyframes meniscus-sweep {
+  0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
+  25% { opacity: 0.8; }
+  100% { transform: translateX(250%) skewX(-15deg); opacity: 0; }
+}
+.animate-meniscus-sweep {
+  animation: meniscus-sweep 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gold-halo-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.04); }
+}
+.animate-gold-halo {
+  animation: gold-halo-pulse 4s ease-in-out infinite;
+}
+
 
 /* ─── Button shimmer sweep ─── */
 .btn-shimmer {
@@ -523,3 +577,30 @@ button:focus-visible,
   padding-right: clamp(20px, 6vw, 100px);
 }
 
+/* ─── Ultra-premium surface system ─── */
+.premium-glass {
+  background: linear-gradient(160deg, rgba(26,20,11,.80) 0%, rgba(9,7,4,.88) 100%);
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+  border: 1px solid rgba(198,161,91,.22);
+  box-shadow:
+    0 40px 80px -24px rgba(0,0,0,.95),
+    0 0 0 1px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,235,175,.10),
+    inset 0 0 40px rgba(198,161,91,.03);
+}
+
+.gold-text {
+  background: linear-gradient(100deg, #B8934A 0%, #F3E2A9 45%, #C6A15B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 14px rgba(198,161,91,.35));
+}
+
+.headline-balance { text-wrap: balance; }
+
+.gold-hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(198,161,91,.55), transparent);
+}

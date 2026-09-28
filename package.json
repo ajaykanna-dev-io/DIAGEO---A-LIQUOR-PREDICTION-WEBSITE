@@ -1,9 +1,9 @@
 {
-  "name": "diageo-spirit-discovery",
+  "name": "no8reserve-spirit-discovery",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "DIAGEO — an ultra-premium frontend prototype for discovering your spirit through a guided taste journey.",
+  "description": "no8reserve — an ultra-premium frontend prototype for discovering your spirit through a guided taste journey.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

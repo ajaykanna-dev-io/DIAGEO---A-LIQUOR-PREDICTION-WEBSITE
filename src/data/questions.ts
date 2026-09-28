@@ -1143,5 +1143,52 @@ export const questions: Question[] = [
   }
 })
 
+/**
+ * Fisher-Yates shuffle that produces a randomized order of questions
+ * with freshly indexed sequence positions (1..13).
+ */
+export function getShuffledQuestions(): Question[] {
+  const shuffled = [...questions]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.map((q, idx) => ({
+    ...q,
+    index: idx + 1,
+  }))
+}
+
+/**
+ * Reconstructs the question array in the exact order specified by question IDs,
+ * ensuring any missing questions are appended so all 13 are always present.
+ */
+export function getQuestionsFromIds(ids: string[]): Question[] {
+  const map = new Map(questions.map((q) => [q.id, q]))
+  const ordered: Question[] = []
+  const seen = new Set<string>()
+
+  ids.forEach((id) => {
+    const q = map.get(id)
+    if (q && !seen.has(id)) {
+      seen.add(id)
+      ordered.push(q)
+    }
+  })
+
+  // Append any missing questions to guarantee completeness
+  questions.forEach((q) => {
+    if (!seen.has(q.id)) {
+      seen.add(q.id)
+      ordered.push(q)
+    }
+  })
+
+  return ordered.map((q, idx) => ({
+    ...q,
+    index: idx + 1,
+  }))
+}
+
 export default questions
 
